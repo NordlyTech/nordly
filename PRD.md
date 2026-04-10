@@ -1,153 +1,136 @@
 # Planning Guide
 
-**Experience Qualities**:
+A streamlined onboarding wizard for Nordly that collects essential company and energy data to deliver immediate AI-powered insights.
 
 **Experience Qualities**:
-This is a marketing landing page designed to communicate value propositions and drive conversions, with no interactiv
+1. **Effortless** - Users complete onboarding in under 2 minutes with minimal friction
+2. **Progressive** - Information is collected step-by-step without overwhelming the user
+3. **Motivating** - Clear progress indication and the promise of immediate insights keep users engaged
+
+**Complexity Level**: Light Application (multiple features with basic state)
+This is a multi-step wizard with form validation and state management that guides users through data collection before presenting a dashboard with insights. It's more than a micro tool but simpler than a full-featured application.
+
 ## Essential Features
-**Hero Section with Value Proposition**
 
-- Progression: User reads headline → understands value → cli
+**Step 1: Company Information**
+- Functionality: Collect company name and country
+- Purpose: Establish user context and personalize the experience
+- Trigger: User lands on the application
+- Progression: User sees welcome message → enters company name → selects country from dropdown → clicks Next
+- Success criteria: Form validates required fields, smooth transition to next step
 
+**Step 2: Location Setup**
+- Functionality: Add first location with name, type, and optional area
+- Purpose: Capture the primary energy consumption site
+- Trigger: User completes Step 1
+- Progression: User enters location name → selects location type from dropdown → optionally enters area in sqm → clicks Next
+- Success criteria: Location types are clear and comprehensive, area field accepts numeric input with proper formatting
 
-## Essential Features
+**Step 3: Energy Data Entry**
+- Functionality: Collect monthly kWh consumption
+- Purpose: Gather baseline energy data for AI analysis
+- Trigger: User completes Step 2
+- Progression: User enters monthly kWh value → clicks Complete → sees loading state → dashboard appears
+- Success criteria: Input accepts numeric values with thousands separator, shows appropriate field help text
 
-**Hero Section with Value Proposition**
-- Purpose: Address primary pain points (cost reduction, CO2 tracking, sustainabil
-- Progression: User reads benefit 1 → benefit 2 → benefit 3 → understands compreh
+**Dashboard with Insights**
+- Functionality: Display AI-generated energy insights based on collected data
+- Purpose: Provide immediate value and validate the onboarding investment
+- Trigger: User completes Step 3
+- Progression: Loading animation (1-2s) → Dashboard appears with personalized insights → User explores recommendations
+- Success criteria: Insights feel personalized and actionable, dashboard is visually engaging
 
-- Progression: User reads headline → understands value → clicks CTA → (conversion)
-- Success criteria: Clear headline visible above fold, CTA button stands out, messaging is instantly understandable
+## Edge Case Handling
 
-**Three-Step Process Section**
-- Functionality: Visual presentation of how Nordly works in three simple steps
-- Purpose: Reduce perceived complexity and show ease of use
-- Trigger: User scrolls past hero
-- Progression: User sees step 1 (Upload) → step 2 (AI Insights) → step 3 (ESG Report) → understands flow
-- Success criteria: Steps are visually distinct, icons/illustrations support the messaging, flow is left-to-right or top-to-bottom
+- **Empty Fields**: Form validation prevents progression with clear inline error messages
+- **Invalid Data**: Numeric fields reject non-numeric input and provide formatting guidance
+- **Browser Back**: Progress is preserved if user navigates back through steps
+- **Refresh During Onboarding**: Data persists and user returns to current step
+- **Completed Onboarding**: Returning users see dashboard directly, not wizard
 
-**Value Propositions Grid**
-- Functionality: Three key benefits displayed as cards or sections
-- Purpose: Address primary pain points (cost reduction, CO2 tracking, sustainability)
-- Trigger: User scrolls through page
-- Progression: User reads benefit 1 → benefit 2 → benefit 3 → understands comprehensive value
-- Success criteria: Each benefit is clearly articulated with supporting copy
+## Design Direction
 
-**AI Insights Examples**
-
-
-
-
-- **Secondary Colors**: 
-
-- **Foreground/Backgro
-  - Background (Pure White #FFFFFF): Cool Gray (#6B7280) - Rati
-
-
-
-
-
-  - H3 (Subsection Hea
-  - Body Large (Hero Subtext): DM Sans Regular/20px/relaxed (1.6)
-  - Button Text: DM Sans Medium/16px/normal letter spacing
-## Animations
-Animations should enhance usability and create moments of delight without slowing down the user exp
-**Scroll-triggered fade-ins**: Sections gently fade up as they enter viewport (200ms ease-out) t
-
-
-
-  - **Button**: Primary and secondary variants; primary us
-  - **Badge**: For "Popular" or "Free"
-  
-  - **Feature Grid**: Custom 3-column grid (stacks on mobile) for "Ho
-
-  
-
-  - Links: Default (gray text), Hover (teal text with underline)
-- **Icon Selection**:
-  - AI/Insights: `Lightning` or `MagicWand` from Phosphor
-  - Cost reduction: `TrendDown` from Phosphor
-  - Sustainability: `Recycle` from Phosphor
-
-  - Section padding
-
-The design should evoke feelings of **trust, clarity, and modernity**. Users should feel they're engaging with a premium, enterprise-grade solution while experiencing the calm, uncluttered aesthetic of Nordic design. The page should feel spacious, breathable, and sophisticated—never cluttered or overwhelming.
+The design should evoke **simplicity, confidence, and forward momentum**. Users should feel the process is quick and worthwhile, with each step feeling like progress toward valuable insights. The wizard should feel spacious and uncluttered, using Nordic-inspired minimalism with clear visual hierarchy.
 
 ## Color Selection
 
-Nordic-inspired palette with soft, natural tones and strategic use of green/teal to represent sustainability and environmental focus.
+Clean, modern palette that reinforces trust and progress while maintaining the Nordly brand identity.
 
-- **Primary Color**: Soft Teal (`oklch(0.65 0.08 195)`) - Represents sustainability, environmental consciousness, and technology; used for primary CTAs and key interactive elements
+- **Primary Color**: Soft Teal (`oklch(0.65 0.08 195)`) - Represents environmental consciousness and forward progress; used for primary buttons and progress indicators
 - **Secondary Colors**: 
-  - Light Sage Green (`oklch(0.92 0.03 155)`) - Subtle backgrounds for alternating sections
-  - Cool Gray (`oklch(0.55 0.01 240)`) - Body text and supporting elements
-- **Accent Color**: Vibrant Teal (`oklch(0.58 0.12 195)`) - Used for hover states and emphasis on CTAs
+  - Light Sage Background (`oklch(0.98 0.01 155)`) - Subtle card backgrounds
+  - Cool Gray (`oklch(0.55 0.01 240)`) - Body text and labels
+- **Accent Color**: Vibrant Teal (`oklch(0.58 0.12 195)`) - Step completion indicators and success states
 - **Foreground/Background Pairings**:
-  - Primary (Soft Teal #4AA09B): White text (#FFFFFF) - Ratio 4.51:1 ✓
-  - Background (Pure White #FFFFFF): Cool Gray (#6B7280) - Ratio 7.2:1 ✓
-  - Accent (Vibrant Teal #2D8A84): White text (#FFFFFF) - Ratio 5.8:1 ✓
+  - Primary Button (Soft Teal): White text (#FFFFFF) - Ratio 4.51:1 ✓
+  - Background (Pure White): Cool Gray text - Ratio 7.2:1 ✓
+  - Card Background (Light Sage): Dark Gray text - Ratio 12.8:1 ✓
 
 ## Font Selection
 
-Typography should feel modern, readable, and slightly geometric to reinforce the clean, systematic nature of data-driven insights.
+Typography should feel modern, confident, and highly readable for form labels and inputs.
 
-**Primary Font**: DM Sans - A geometric sans-serif with excellent readability and a modern, approachable character that works well for both headlines and body copy.
+**Primary Font**: DM Sans - Clean geometric sans-serif that maintains excellent readability at all sizes
 
 - **Typographic Hierarchy**:
-  - H1 (Hero Headline): DM Sans Bold/56px/tight (-0.02em) letter spacing
-  - H2 (Section Headers): DM Sans Bold/40px/tight (-0.01em) letter spacing
-  - H3 (Subsection Headers): DM Sans SemiBold/28px/normal letter spacing
-  - H4 (Card Titles): DM Sans SemiBold/20px/normal letter spacing
-  - Body Large (Hero Subtext): DM Sans Regular/20px/relaxed (1.6) line height
-  - Body Regular: DM Sans Regular/16px/relaxed (1.6) line height
+  - H1 (Wizard Title): DM Sans Bold/32px/tight letter spacing
+  - H2 (Step Title): DM Sans SemiBold/24px/normal letter spacing
+  - Label (Form Labels): DM Sans Medium/14px/normal letter spacing
+  - Body (Instructions): DM Sans Regular/16px/relaxed (1.5) line height
+  - Input Text: DM Sans Regular/16px/normal letter spacing
   - Button Text: DM Sans Medium/16px/normal letter spacing
 
 ## Animations
 
-Animations should enhance usability and create moments of delight without slowing down the user experience. Use subtle, purposeful motion.
+Animations should reinforce progress and provide satisfying feedback without delaying the user.
 
-**Scroll-triggered fade-ins**: Sections gently fade up as they enter viewport (200ms ease-out) to create a sense of progressive revelation
-**Button interactions**: Scale slightly on hover (1.02x, 150ms) and show shadow depth to reinforce pressability
-**Card hovers**: Subtle lift effect (translate-y: -4px, 200ms) with shadow increase for interactive elements
-**CTA pulse**: Gentle, slow pulse animation on primary hero CTA to draw attention without being aggressive
+**Step Transitions**: Smooth slide animation (300ms ease-in-out) when moving between steps with subtle fade
+**Progress Bar**: Animated fill (200ms ease-out) when step is completed
+**Button Interactions**: Slight scale (1.02x, 150ms) on hover with shadow increase
+**Form Validation**: Shake animation (400ms) for errors, smooth appearance of error messages
+**Loading State**: Subtle pulse animation while generating insights
+**Dashboard Entry**: Fade-in with staggered animation of insight cards (100ms delay between each)
 
 ## Component Selection
 
 - **Components**:
-  - **Button**: Primary and secondary variants; primary uses teal background with hover state darkening
-  - **Card**: Clean cards with subtle borders (`border-border`) for value props, pricing, and features; hover state with shadow
-  - **Badge**: For "Popular" or "Free" labels on pricing tiers
-  - **Separator**: Thin horizontal rules to divide major sections
+  - **Card**: Main container for wizard steps with subtle shadow
+  - **Button**: Primary variant for "Next" and "Complete", secondary for "Back"
+  - **Input**: Text inputs for name fields with clear focus states
+  - **Select**: Dropdown for country and location type selection
+  - **Label**: Form labels with required field indicators
+  - **Progress**: Custom step indicator showing 1/3, 2/3, 3/3
+  - **Badge**: Step numbers and completion indicators
 
 - **Customizations**:
-  - **Feature Grid**: Custom 3-column grid (stacks on mobile) for "How it Works" and "Value Props"
-  - **Pricing Cards**: Custom side-by-side comparison with highlighted "Premium" option
-  - **Hero Section**: Custom full-width section with centered content and generous vertical padding
-  - **ESG Preview Card**: Custom styled container to showcase report aesthetics with subtle background
+  - **Step Progress Bar**: Custom linear progress indicator with three segments
+  - **Wizard Container**: Centered card with max-width constraint (600px)
+  - **Dashboard Layout**: Custom grid layout for insight cards with responsive columns
+  - **Insight Cards**: Custom styled containers with icons and metrics
 
 - **States**:
-  - Buttons: Default (teal bg), Hover (darker teal + shadow), Active (scale down 0.98)
-  - Cards: Default (white bg, subtle border), Hover (elevated shadow, slight translate-y)
-  - Links: Default (gray text), Hover (teal text with underline)
+  - Buttons: Default (teal bg), Hover (darker teal + shadow + scale), Disabled (muted gray)
+  - Inputs: Default (border), Focus (ring + border color change), Error (red border + message), Filled (subtle background)
+  - Steps: Active (bold + colored), Completed (check icon), Upcoming (muted)
 
 - **Icon Selection**:
-  - Upload: `UploadSimple` from Phosphor
-  - AI/Insights: `Lightning` or `MagicWand` from Phosphor
-  - Report: `FileText` or `ChartBar` from Phosphor
-  - Cost reduction: `TrendDown` from Phosphor
-  - CO2/Environment: `Leaf` from Phosphor
-  - Sustainability: `Recycle` from Phosphor
-  - Check marks: `Check` from Phosphor for feature lists
+  - Building/Company: `Buildings` from Phosphor
+  - Location: `MapPin` from Phosphor
+  - Energy: `Lightning` from Phosphor
+  - Check/Complete: `CheckCircle` from Phosphor
+  - Arrow Next: `ArrowRight` from Phosphor
+  - Insights: `ChartLine`, `TrendUp`, `Leaf` from Phosphor
 
 - **Spacing**:
-  - Section padding: `py-24` (96px) desktop, `py-16` (64px) mobile
-  - Container max-width: `max-w-7xl` (1280px)
-  - Grid gaps: `gap-8` (32px) for feature grids, `gap-12` (48px) between major sections
-  - Card padding: `p-8` (32px) for feature cards, `p-6` (24px) for smaller elements
+  - Wizard card padding: `p-8` (32px) desktop, `p-6` (24px) mobile
+  - Form field spacing: `gap-6` (24px) between fields
+  - Button spacing: `mt-8` (32px) from last input
+  - Dashboard card gaps: `gap-6` (24px) in grid
+  - Section spacing: `mb-8` (32px) between major sections
 
 - **Mobile**:
-  - Hero headline reduces to 40px on mobile
-  - Three-column grids stack to single column below 768px
-  - Horizontal padding reduces from px-8 to px-4 on mobile
-  - CTA buttons go full-width on mobile for easier tapping
-  - Pricing cards stack vertically on mobile with clear separation
+  - Wizard card takes full width with minimal side padding (16px)
+  - Form inputs are full-width for easy tapping
+  - Buttons are full-width on mobile
+  - Dashboard cards stack to single column below 768px
+  - Font sizes remain consistent (already optimized for mobile reading)

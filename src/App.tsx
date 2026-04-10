@@ -1,30 +1,48 @@
-import { Header } from '@/components/Header'
-import { Hero } from '@/components/Hero'
-import { HowItWorks } from '@/components/HowItWorks'
-import { ValuePropositions } from '@/components/ValuePropositions'
-import { AIInsights } from '@/components/AIInsights'
-import { ESGReportPreview } from '@/components/ESGReportPreview'
-import { Pricing } from '@/components/Pricing'
-import { FinalCTA } from '@/components/FinalCTA'
-import { Footer } from '@/components/Footer'
+import { OnboardingWizard } from '@/components/OnboardingWizard'
+import { Dashboard } from '@/components/Dashboard'
 import { Toaster } from '@/components/ui/sonner'
+import { useKV } from '@github/spark/hooks'
+
+type OnboardingData = {
+  company: {
+    name: string
+    country: string
+  }
+  location: {
+    name: string
+    type: string
+    area: string
+  }
+  energy: {
+    monthlyKwh: string
+  }
+}
 
 function App() {
+  const [onboardingData, setOnboardingData, deleteOnboardingData] = useKV<OnboardingData | null>('nordly-onboarding', null)
+
+  const handleComplete = (data: OnboardingData) => {
+    setOnboardingData(data)
+  }
+
+  const handleReset = () => {
+    deleteOnboardingData()
+  }
+
+  if (!onboardingData) {
+    return (
+      <>
+        <OnboardingWizard onComplete={handleComplete} />
+        <Toaster />
+      </>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main>
-        <Hero />
-        <HowItWorks />
-        <ValuePropositions />
-        <AIInsights />
-        <ESGReportPreview />
-        <Pricing />
-        <FinalCTA />
-      </main>
-      <Footer />
+    <>
+      <Dashboard data={onboardingData} onReset={handleReset} />
       <Toaster />
-    </div>
+    </>
   )
 }
 
