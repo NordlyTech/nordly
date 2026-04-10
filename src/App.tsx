@@ -1,10 +1,10 @@
-import { EquipmentOptimization } from '@/components/EquipmentOptimization'
+import { PricingPage } from '@/components/PricingPage'
 import { Toaster } from '@/components/ui/sonner'
 
 function App() {
   return (
     <>
-      <EquipmentOptimization />
+      <PricingPage />
       <Toaster />
     </>
   )
