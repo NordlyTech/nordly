@@ -1,24 +1,15 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { motion } from 'framer-motion'
-import { motion } from 'framer-motion'
+import { Check, X, Sparkle, TrendUp, CurrencyEur } from '@phosphor-icons/react'
 
-
-  { name: 'Bas
-  { name: 'ESG 
-  { name: 'Detaile
- 
-
-export function PricingPage() {
-    <div className="min-h-screen bg-gradient-to-br from-
-        <motion.div
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r fr
-          </h1>
-            Choose the plan that fits your sustainability
-        </motion.div>
- 
+const features = [
+  { name: 'Basic Equipment Tracking', free: true, premium: true },
+  { name: 'ESG Reporting', free: true, premium: true },
+  { name: 'Detailed Analytics', free: false, premium: true },
+  { name: 'AI-Powered Insights', free: false, premium: true },
+  { name: 'Priority Support', free: false, premium: true },
+]
 
 export function PricingPage() {
   return (
@@ -46,13 +37,13 @@ export function PricingPage() {
           >
             <Card className="relative h-full">
               <CardHeader>
-              </CardContent>
+                <CardTitle>Free</CardTitle>
                 <CardDescription>Perfect for getting started</CardDescription>
-                  Get Started
+                <div className="mt-4">
                   <div className="text-4xl font-bold">€0</div>
                   <div className="text-muted-foreground">/month</div>
                 </div>
-          <motion.div
+              </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {features.map((feature) => (
@@ -62,22 +53,20 @@ export function PricingPage() {
                           <Check className="text-accent" size={16} weight="bold" />
                         ) : (
                           <X className="text-muted-foreground" size={16} />
-                    <div c
+                        )}
                       </div>
-                </div>
-                        <div className="text-sm">{feature.name}</div>
-                      </div>
+                      <div className="text-sm">{feature.name}</div>
                     </div>
-                     
-            </Card>
+                  ))}
+                </div>
               </CardContent>
               <CardFooter>
                 <Button className="w-full" variant="outline">
                   Get Started
                 </Button>
               </CardFooter>
-        >
-                      <
+            </Card>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -86,94 +75,41 @@ export function PricingPage() {
           >
             <Card className="relative h-full border-primary shadow-lg">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium flex items-center gap-2">
-
-          <motion.div
-            animate=
-          >
+                <Sparkle size={16} weight="fill" />
+                Most Popular
+              </div>
               <CardHeader>
-                  <TrendUp className="text-accent" size={24} weight="bold" />
-                <CardTitle>Average Sav
-              <CardContent>
-                <div className="text-muted-foreground">
-                </div>
-            </Card>
-
-            initial={{ opac
-            transition={{ d
-            <Card>
-                <div className="w-12 h-12 roun
+                <CardTitle>Premium</CardTitle>
+                <CardDescription>Full access to all features</CardDescription>
+                <div className="mt-4">
+                  <div className="text-4xl font-bold">€29</div>
+                  <div className="text-muted-foreground">/month</div>
                 </div>
               </CardHeader>
-                <div className="text-4xl fon
-                  Average ROI within the first year
+              <CardContent>
+                <div className="space-y-3">
+                  {features.map((feature) => (
+                    <div key={feature.name} className="flex items-start gap-3">
+                      <div className="rounded-full bg-accent/10 p-1 mt-0.5">
+                        {feature.premium ? (
+                          <Check className="text-accent" size={16} weight="bold" />
+                        ) : (
+                          <X className="text-muted-foreground" size={16} />
+                        )}
+                      </div>
+                      <div className="text-sm">{feature.name}</div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
+              <CardFooter>
+                <Button className="w-full">
+                  Start Free Trial
+                </Button>
+              </CardFooter>
+            </Card>
           </motion.div>
-      </div>
-  )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        </div>
 
         <div className="grid md:grid-cols-2 gap-8 mt-8">
           <motion.div
@@ -205,7 +141,7 @@ export function PricingPage() {
             <Card>
               <CardHeader>
                 <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
-                  <CurrencyEuro className="text-primary" size={24} weight="bold" />
+                  <CurrencyEur className="text-primary" size={24} weight="bold" />
                 </div>
                 <CardTitle>Return on Investment</CardTitle>
               </CardHeader>
