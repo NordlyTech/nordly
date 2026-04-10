@@ -1,21 +1,21 @@
 # Planning Guide
 
-A modern, conversion-focused SaaS landing page for Nordly, an AI-powered platform that transforms energy data into cost savings and ESG reports.
+**Experience Qualities**:
 
 **Experience Qualities**:
-1. **Calm & Professional** - Nordic minimalism creates a sense of trust and reliability that enterprise buyers expect
-2. **Clear & Purposeful** - Every section directly communicates value without unnecessary ornamentation
-3. **Premium & Modern** - High-end SaaS aesthetic (Stripe/Notion) that positions Nordly as an industry-leading solution
+This is a marketing landing page designed to communicate value propositions and drive conversions, with no interactiv
+## Essential Features
+**Hero Section with Value Proposition**
 
-**Complexity Level**: Content Showcase (information-focused)
-This is a marketing landing page designed to communicate value propositions and drive conversions, with no interactive application features beyond standard web interactions.
+- Progression: User reads headline → understands value → cli
+
 
 ## Essential Features
 
 **Hero Section with Value Proposition**
-- Functionality: Displays primary headline, subheadline, and prominent CTA button
-- Purpose: Immediately communicate what Nordly does and capture high-intent leads
-- Trigger: Page load
+- Purpose: Address primary pain points (cost reduction, CO2 tracking, sustainabil
+- Progression: User reads benefit 1 → benefit 2 → benefit 3 → understands compreh
+
 - Progression: User reads headline → understands value → clicks CTA → (conversion)
 - Success criteria: Clear headline visible above fold, CTA button stands out, messaging is instantly understandable
 
@@ -34,42 +34,42 @@ This is a marketing landing page designed to communicate value propositions and 
 - Success criteria: Each benefit is clearly articulated with supporting copy
 
 **AI Insights Examples**
-- Functionality: Visual showcase of sample AI-generated insights
-- Purpose: Demonstrate the platform's intelligence and build credibility
-- Trigger: User scrolls to section
-- Progression: User views example insights → understands AI capability → gains confidence
-- Success criteria: Examples feel authentic, insights appear actionable, formatting is scannable
 
-**ESG Report Preview**
-- Functionality: Visual representation of generated ESG reports
-- Purpose: Show the end deliverable and its professional quality
-- Trigger: User scrolls to section
-- Progression: User sees report preview → understands output quality → visualizes using it
-- Success criteria: Report looks professional, data visualizations are clear, format appears credible
 
-**Pricing Comparison**
-- Functionality: Side-by-side comparison of Free vs Premium plans
-- Purpose: Provide transparent pricing and encourage conversion to paid plans
-- Trigger: User scrolls to pricing section
-- Progression: User reviews Free features → compares Premium features → makes decision → clicks CTA
-- Success criteria: Features are clearly differentiated, pricing is prominent, CTAs are distinct
 
-**Final CTA Section**
-- Functionality: Conversion-focused section at page bottom
-- Purpose: Capture users who have read through all content
-- Trigger: User scrolls to end of page
-- Progression: User reads final compelling message → clicks CTA → converts
-- Success criteria: CTA is prominent, messaging reinforces core value
 
-## Edge Case Handling
+- **Secondary Colors**: 
 
-- **Mobile responsiveness**: All sections stack vertically on mobile with appropriate spacing and readable font sizes
-- **Empty states**: N/A for static landing page
-- **Long content**: Text truncation not needed; copy should be concise by design
-- **Slow image loading**: Use optimized assets and consider skeleton states for key visual elements
-- **CTA interactions**: Hover states provide clear feedback; for this prototype, CTAs will show toast notifications
+- **Foreground/Backgro
+  - Background (Pure White #FFFFFF): Cool Gray (#6B7280) - Rati
 
-## Design Direction
+
+
+
+
+  - H3 (Subsection Hea
+  - Body Large (Hero Subtext): DM Sans Regular/20px/relaxed (1.6)
+  - Button Text: DM Sans Medium/16px/normal letter spacing
+## Animations
+Animations should enhance usability and create moments of delight without slowing down the user exp
+**Scroll-triggered fade-ins**: Sections gently fade up as they enter viewport (200ms ease-out) t
+
+
+
+  - **Button**: Primary and secondary variants; primary us
+  - **Badge**: For "Popular" or "Free"
+  
+  - **Feature Grid**: Custom 3-column grid (stacks on mobile) for "Ho
+
+  
+
+  - Links: Default (gray text), Hover (teal text with underline)
+- **Icon Selection**:
+  - AI/Insights: `Lightning` or `MagicWand` from Phosphor
+  - Cost reduction: `TrendDown` from Phosphor
+  - Sustainability: `Recycle` from Phosphor
+
+  - Section padding
 
 The design should evoke feelings of **trust, clarity, and modernity**. Users should feel they're engaging with a premium, enterprise-grade solution while experiencing the calm, uncluttered aesthetic of Nordic design. The page should feel spacious, breathable, and sophisticated—never cluttered or overwhelming.
 
@@ -118,18 +118,18 @@ Animations should enhance usability and create moments of delight without slowin
   - **Card**: Clean cards with subtle borders (`border-border`) for value props, pricing, and features; hover state with shadow
   - **Badge**: For "Popular" or "Free" labels on pricing tiers
   - **Separator**: Thin horizontal rules to divide major sections
-  
+
 - **Customizations**:
   - **Feature Grid**: Custom 3-column grid (stacks on mobile) for "How it Works" and "Value Props"
   - **Pricing Cards**: Custom side-by-side comparison with highlighted "Premium" option
   - **Hero Section**: Custom full-width section with centered content and generous vertical padding
   - **ESG Preview Card**: Custom styled container to showcase report aesthetics with subtle background
-  
+
 - **States**:
   - Buttons: Default (teal bg), Hover (darker teal + shadow), Active (scale down 0.98)
   - Cards: Default (white bg, subtle border), Hover (elevated shadow, slight translate-y)
   - Links: Default (gray text), Hover (teal text with underline)
-  
+
 - **Icon Selection**:
   - Upload: `UploadSimple` from Phosphor
   - AI/Insights: `Lightning` or `MagicWand` from Phosphor
@@ -138,13 +138,13 @@ Animations should enhance usability and create moments of delight without slowin
   - CO2/Environment: `Leaf` from Phosphor
   - Sustainability: `Recycle` from Phosphor
   - Check marks: `Check` from Phosphor for feature lists
-  
+
 - **Spacing**:
   - Section padding: `py-24` (96px) desktop, `py-16` (64px) mobile
   - Container max-width: `max-w-7xl` (1280px)
   - Grid gaps: `gap-8` (32px) for feature grids, `gap-12` (48px) between major sections
   - Card padding: `p-8` (32px) for feature cards, `p-6` (24px) for smaller elements
-  
+
 - **Mobile**:
   - Hero headline reduces to 40px on mobile
   - Three-column grids stack to single column below 768px
