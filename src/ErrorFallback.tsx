@@ -9,10 +9,6 @@ interface ErrorFallbackProps {
 }
 
 export const ErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps) => {
-  // When encountering an error in the development mode, rethrow it and don't display the boundary.
-  // The parent UI will take care of showing a more helpful dialog.
-  if (import.meta.env.DEV) throw error;
-
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -20,7 +16,7 @@ export const ErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps)
           <AlertTriangleIcon />
           <AlertTitle>This spark has encountered a runtime error</AlertTitle>
           <AlertDescription>
-            Something unexpected happened while running the application. The error details are shown below. Contact the spark author and let them know about this issue.
+            Something unexpected happened while running the application. The error details are shown below. {import.meta.env.DEV ? 'Check the console for more details.' : 'Contact the spark author and let them know about this issue.'}
           </AlertDescription>
         </Alert>
         
@@ -29,6 +25,16 @@ export const ErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps)
           <pre className="text-xs text-destructive bg-muted/50 p-3 rounded border overflow-auto max-h-32">
             {error.message}
           </pre>
+          {import.meta.env.DEV && error.stack && (
+            <details className="mt-2">
+              <summary className="text-xs cursor-pointer text-muted-foreground hover:text-foreground">
+                Stack Trace
+              </summary>
+              <pre className="text-xs text-destructive bg-muted/50 p-3 rounded border overflow-auto max-h-48 mt-2">
+                {error.stack}
+              </pre>
+            </details>
+          )}
         </div>
         
         <Button 
