@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Leaf } from '@phosphor-icons/react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router'
 
 export function Header() {
   const location = useLocation()

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { OnboardingWizard } from '@/components/OnboardingWizard'
 import { Dashboard } from '@/components/Dashboard'
 import { Header } from '@/components/Header'
