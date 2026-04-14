@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+:root {
+  --radius: 0.625rem;
+  --background: #F4F8FB;
+  --foreground: #1F2A37;
+  --card: #FFFFFF;
+  --card-foreground: #1F2A37;
+  --popover: #FFFFFF;
+  --popover-foreground: #1F2A37;
+  --primary: #0E8DB8;
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: #F4F8FB;
+  --secondary-foreground: #1F2A37;
+  --muted: #F4F8FB;
+  --muted-foreground: #64748B;
+  --accent: #0E8DB8;
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #DCE6EE;
+  --input: #F4F8FB;
+  --ring: #0E8DB8;
+
+  /* Nordly brand colors */
+  --nordly-primary: #0E8DB8;
+  --nordly-primary-dark: #0A6F92;
+  --nordly-primary-soft: #D9F0F7;
+  --nordly-success: #35B36B;
+  --nordly-success-soft: #E8F7EE;
+  --nordly-text: #1F2A37;
+  --nordly-text-muted: #64748B;
+  --nordly-bg: #F4F8FB;
+  --nordly-surface: #FFFFFF;
+  --nordly-border: #DCE6EE;
+  --nordly-cta-dark: #0F172A;
+}
+
+.dark {
+  --background: #0F172A;
+  --foreground: #FFFFFF;
+  --card: #1A2237;
+  --card-foreground: #FFFFFF;
+  --popover: #1A2237;
+  --popover-foreground: #FFFFFF;
+  --primary: #3BA8D1;
+  --primary-foreground: #0F172A;
+  --secondary: #1A2237;
+  --secondary-foreground: #FFFFFF;
+  --muted: #2D3B4F;
+  --muted-foreground: #9CA3AF;
+  --accent: #3BA8D1;
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: #3BA8D1;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

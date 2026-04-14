@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -22,6 +24,7 @@ type OnboardingData = {
   energy: {
     monthlyKwh: string
   }
+  aiInsights: string[]
 }
 
 interface DashboardProps {
@@ -95,9 +98,10 @@ export function Dashboard({ data, onReset }: DashboardProps) {
               label="Estimated Savings"
               value={`€${metrics.monthlySavings.toLocaleString()}`}
               unit="/mo"
-              icon={<CurrencyEur className="w-6 h-6 text-accent" weight="duotone" />}
+              icon={<CurrencyEur className="w-6 h-6 text-[#35B36B]" weight="duotone" />}
               trend={{ value: metrics.savingsPercent, label: `${metrics.savingsPercent}%` }}
               delay={0.2}
+              containerBg="#E8F7EE"
             />
             
             <motion.div
@@ -125,7 +129,7 @@ export function Dashboard({ data, onReset }: DashboardProps) {
               locationType={data.location.type} 
             />
             
-            <AIInsightsList companyData={data} />
+            <AIInsightsList companyData={data} insights={data.aiInsights} />
           </div>
           
           <LockedPremiumCard />

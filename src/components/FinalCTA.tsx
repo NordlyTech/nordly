@@ -1,11 +1,12 @@
 import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import { ArrowRight, Sparkle } from '@phosphor-icons/react'
-import { toast } from 'sonner'
+
+const PRODUCT_APP_URL = 'http://localhost:3000'
 
 export function FinalCTA() {
   const handleCTA = () => {
-    toast.success('Getting your free ESG report ready!')
+    window.location.href = `${PRODUCT_APP_URL}/register`
   }
 
   return (

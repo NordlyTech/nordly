@@ -1,3 +1,5 @@
+"use client"
+
 import { motion } from 'framer-motion'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +18,7 @@ interface MetricCardProps {
   delay?: number
 }
 
-export function MetricCard({ label, value, unit, icon, trend, delay = 0 }: MetricCardProps) {
+export function MetricCard({ label, value, unit, icon, trend, delay = 0, containerBg = '#D9F0F7' }: MetricCardProps & { containerBg?: string }) {
   const [displayValue, setDisplayValue] = useState('0')
   
   useEffect(() => {
@@ -56,7 +58,7 @@ export function MetricCard({ label, value, unit, icon, trend, delay = 0 }: Metri
       <Card className="hover:shadow-lg transition-all duration-300 hover:scale-[1.02]">
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-4">
-            <div className="p-3 bg-primary/10 rounded-lg">
+            <div className="p-3 rounded-lg" style={{ backgroundColor: containerBg }}>
               {icon}
             </div>
             {trend && (

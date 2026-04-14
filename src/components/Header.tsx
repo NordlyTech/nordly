@@ -1,6 +1,7 @@
-import { Button } from '@/components/ui/button'
 import { Leaf } from '@phosphor-icons/react'
 import { Link, useLocation } from 'react-router'
+
+const PRODUCT_APP_URL = 'http://localhost:3000'
 
 export function Header() {
   const location = useLocation()
@@ -38,23 +39,21 @@ export function Header() {
             >
               Pricing
             </Link>
-            <Link 
-              to="/onboarding" 
-              className={`text-sm font-medium transition-colors ${
-                isActive('/onboarding') ? 'text-primary' : 'text-muted-foreground hover:text-primary'
-              }`}
-            >
-              Dashboard
-            </Link>
           </nav>
 
           <div className="flex items-center gap-3">
-            <Button variant="ghost" className="text-sm font-medium">
+            <a
+              href={`${PRODUCT_APP_URL}/login`}
+              className="inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-medium transition hover:bg-secondary"
+            >
               Sign in
-            </Button>
-            <Button asChild className="bg-primary hover:bg-accent text-primary-foreground text-sm font-medium">
-              <Link to="/onboarding">Get started</Link>
-            </Button>
+            </a>
+            <a
+              href={`${PRODUCT_APP_URL}/register`}
+              className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+            >
+              Get started
+            </a>
           </div>
         </div>
       </div>

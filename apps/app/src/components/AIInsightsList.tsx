@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,6 +21,7 @@ interface AIInsightsListProps {
       monthlyKwh: string
     }
   }
+  insights: string[]
 }
 
 type Insight = {
@@ -26,60 +29,24 @@ type Insight = {
   icon: React.ElementType
 }
 
-export function AIInsightsList({ companyData }: AIInsightsListProps) {
-  const [insights, setInsights] = useState<Insight[]>([])
+export function AIInsightsList({ insights: insightItems }: AIInsightsListProps) {
+  const [displayedInsights, setDisplayedInsights] = useState<Insight[]>([])
   const [loading, setLoading] = useState(true)
   
   useEffect(() => {
-    const generateInsights = async () => {
-      try {
-        const monthlyKwh = Number(companyData.energy.monthlyKwh.replace(/,/g, ''))
-        const locationType = companyData.location.type
-        const area = companyData.location.area
-        
-        const promptText = `You are an energy efficiency expert. Generate exactly 4 actionable energy-saving insights for a ${locationType} business consuming ${monthlyKwh} kWh per month with ${area} square meters of space.
+    const timer = setTimeout(() => {
+      const icons = [Lightbulb, CheckCircle, ChartBar]
+      const resolvedInsights = insightItems.slice(0, 3).map((text, idx) => ({
+        text,
+        icon: icons[idx % icons.length],
+      }))
 
-Return ONLY a JSON object (not an array) with this exact structure:
-{
-  "insights": [
-    "First specific, actionable insight under 100 characters",
-    "Second specific, actionable insight under 100 characters",
-    "Third specific, actionable insight under 100 characters",
-    "Fourth specific, actionable insight under 100 characters"
-  ]
-}
+      setDisplayedInsights(resolvedInsights)
+      setLoading(false)
+    }, 300)
 
-Make each insight:
-- Specific to this business type and usage level
-- Actionable with clear steps
-- Include estimated savings when possible
-- Professional and concise`
-
-        const result = await window.spark.llm(promptText, 'gpt-4o-mini', true)
-        const parsed = JSON.parse(result)
-        
-        const icons = [Lightbulb, CheckCircle, ChartBar, Sparkle]
-        const formattedInsights: Insight[] = parsed.insights.map((text: string, idx: number) => ({
-          text,
-          icon: icons[idx % icons.length]
-        }))
-        
-        setInsights(formattedInsights)
-      } catch (error) {
-        setInsights([
-          { text: 'Optimize HVAC scheduling to reduce consumption during off-hours', icon: Lightbulb },
-          { text: 'Upgrade to LED lighting for 30-40% lighting energy savings', icon: CheckCircle },
-          { text: 'Install smart meters to identify and eliminate phantom loads', icon: ChartBar },
-          { text: 'Consider solar panels to offset peak consumption periods', icon: Sparkle }
-        ])
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    const timer = setTimeout(generateInsights, 500)
     return () => clearTimeout(timer)
-  }, [companyData])
+  }, [insightItems])
   
   return (
     <Card>
@@ -104,7 +71,15 @@ Make each insight:
           </div>
         ) : (
           <div className="space-y-3">
-            {insights.map((insight, idx) => {
+            {displayedInsights.length === 0 && (
+              <div className="rounded-lg bg-muted/50 p-4">
+                <p className="text-sm text-muted-foreground">
+                  No AI insights yet. New recommendations will appear once enough usage data is available.
+                </p>
+              </div>
+            )}
+
+            {displayedInsights.map((insight, idx) => {
               const Icon = insight.icon
               return (
                 <motion.div

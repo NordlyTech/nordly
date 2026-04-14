@@ -1,3 +1,5 @@
+"use client"
+
 import { useState } from 'react'
 import {
   Dialog,
@@ -9,7 +11,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { FileText, Download, Calendar, Buildings, Leaf, Lightning } from '@phosphor-icons/react'
-import { toast } from 'sonner'
 
 interface ESGReportDialogProps {
   open: boolean
@@ -30,7 +31,6 @@ export function ESGReportDialog({ open, onOpenChange, data }: ESGReportDialogPro
     setDownloading(true)
     setTimeout(() => {
       setDownloading(false)
-      toast.success('ESG Report downloaded successfully')
       onOpenChange(false)
     }, 1500)
   }
