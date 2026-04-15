@@ -753,16 +753,10 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
       addLog(`PowerPoint write completed as blob`)
       
       const blob = pptxData as Blob
-      
-      addLog(`Blob created, size: ${blob.size} bytes, type: ${blob.type}`)
-      
-      if (blob.size === 0) {
-        throw new Error('Generated PowerPoint file is empty - no slides were created')
-      }
-      
-      const fileName = `Nordly-Presentation-${new Date().getTime()}.pptx`
+      const fileName = `Nordly-Presentation-${Date.now()}.pptx`
       const url = URL.createObjectURL(blob)
       addLog(`Blob URL created: ${url}`)
+      addLog(`File name: ${fileName}`)
       
       const a = document.createElement('a')
       a.href = url
@@ -774,10 +768,9 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
       addLog('Triggering download via click()...')
       a.click()
       addLog('Click event triggered')
-      
       setTimeout(() => {
+        document.body.removeChild(a)
         if (document.body.contains(a)) {
-          document.body.removeChild(a)
           addLog('Download link removed from DOM')
         }
         URL.revokeObjectURL(url)
@@ -791,9 +784,10 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       toast.error(`Failed to generate PowerPoint: ${errorMessage}`)
       console.error('PowerPoint generation error:', error)
+      addLog(`ERROR: ${errorMessage}`)
     } finally {
       setIsGeneratingPptx(false)
-      addLog('=== Generation process completed ===')
+      addLog('=== PowerPoint generation process completed ===')
     }
   }
 
