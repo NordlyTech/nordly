@@ -295,7 +295,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
             fontSize: 22,
             bold: true,
             color: nordlyBlue,
-                      transition={{ duration: 0.3, delay: index * 0.05 }}
+            fontFace: 'Space Grotesk'
           })
           newSlide.addText('Up to 30% average\ncost reduction', {
             x: 0.8,
