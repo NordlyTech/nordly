@@ -1,27 +1,27 @@
 import { Button } from '@/components/ui/button';
-import { Sparkle } from '@phosphor-icons/react';
+
 
 const PRODUCT_APP_URL = 'http://localhost:3000';
 
 export function FinalCTA() {
-  return (
-    <section className="py-24 relative overflow-hidden">
-      <div className="container mx-auto px-4 text-center relative z-10">
-        <div className="inline-flex items-center gap-2 mb-6">
-          <Sparkle className="text-accent" />
-          <span className="text-sm font-medium text-accent">Ready to optimize?</span>
-        </div>
-        
-        <h2 className="text-4xl md:text-5xl font-bold mb-6">
-          Start saving on equipment costs today
+        </
+        <h2 className="text-4xl md:text-5xl font-bold mb
         </h2>
-        
-        <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-          Join leading companies using Nordly to maximize their equipment ROI
+        <p className="text-xl text-muted-foreground mb-10 max
         </p>
-        
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            si
+        
+            Start Free Trial
           <Button 
+            v
+        
+            Schedule a demo
+        </div>
+    </sectio
+}
+
+
             size="lg" 
             className="text-lg px-8 py-6"
             onClick={() => window.location.href = `${PRODUCT_APP_URL}/signup`}
