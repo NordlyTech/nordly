@@ -4,9 +4,10 @@ import { Footer } from '@/components/Footer'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Download, FileText, Check } from '@phosphor-icons/react'
+import { Download, FileText, Check, Presentation } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
+import pptxgen from 'pptxgenjs'
 
 interface SlideOption {
   id: string
@@ -74,6 +75,7 @@ export function PresentationPage() {
   ])
 
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isGeneratingPptx, setIsGeneratingPptx] = useState(false)
 
   const toggleSlide = (id: string) => {
     setSlides(slides.map(slide => 
@@ -154,6 +156,569 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
       console.error('Generation error:', error)
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const generatePowerPoint = async () => {
+    const enabledSlides = slides.filter(s => s.enabled)
+    
+    if (enabledSlides.length === 0) {
+      toast.error('Please select at least one slide')
+      return
+    }
+
+    setIsGeneratingPptx(true)
+
+    try {
+      const pptx = new pptxgen()
+      
+      pptx.author = 'Nordly'
+      pptx.company = 'Nordly'
+      pptx.title = 'Nordly - Energy Optimization & ESG Reporting'
+      pptx.subject = 'Energy Intelligence Platform Presentation'
+
+      const nordlyBlue = '4A6FA5'
+      const nordlyGreen = '52B788'
+      const darkGray = '2D3748'
+      const lightGray = 'F7FAFC'
+
+      enabledSlides.forEach((slide) => {
+        const newSlide = pptx.addSlide()
+        
+        if (slide.id === 'title') {
+          newSlide.background = { color: nordlyBlue }
+          newSlide.addText('Nordly', {
+            x: 0.5,
+            y: 2.0,
+            w: 9,
+            h: 1.5,
+            fontSize: 60,
+            bold: true,
+            color: 'FFFFFF',
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('Energy Optimization & ESG Reporting', {
+            x: 0.5,
+            y: 3.5,
+            w: 9,
+            h: 0.8,
+            fontSize: 24,
+            color: 'E2E8F0',
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('Turn your energy data into savings and ESG reports in minutes', {
+            x: 0.5,
+            y: 4.5,
+            w: 9,
+            h: 0.5,
+            fontSize: 16,
+            color: 'CBD5E0',
+            align: 'center',
+            italic: true,
+            fontFace: 'Space Grotesk'
+          })
+        } else if (slide.id === 'problem') {
+          newSlide.addText('The Problem', {
+            x: 0.5,
+            y: 0.5,
+            w: 9,
+            h: 0.8,
+            fontSize: 40,
+            bold: true,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          const problems = [
+            'Businesses waste 20-30% on inefficient energy usage',
+            'ESG reporting is complex and time-consuming',
+            'Lack of visibility into energy consumption patterns',
+            'Missing cost-saving opportunities'
+          ]
+          problems.forEach((problem, i) => {
+            newSlide.addText(`• ${problem}`, {
+              x: 1.0,
+              y: 2.0 + (i * 0.8),
+              w: 8,
+              h: 0.6,
+              fontSize: 20,
+              color: darkGray,
+              fontFace: 'Space Grotesk'
+            })
+          })
+        } else if (slide.id === 'solution') {
+          newSlide.addText('Our Solution', {
+            x: 0.5,
+            y: 0.5,
+            w: 9,
+            h: 0.8,
+            fontSize: 40,
+            bold: true,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          const solutions = [
+            'AI analyzes energy consumption patterns',
+            'Identifies cost-saving opportunities automatically',
+            'Generates comprehensive ESG reports in minutes',
+            'Real-time monitoring and alerts'
+          ]
+          solutions.forEach((solution, i) => {
+            newSlide.addText(`• ${solution}`, {
+              x: 1.0,
+              y: 2.0 + (i * 0.8),
+              w: 8,
+              h: 0.6,
+              fontSize: 20,
+              color: darkGray,
+              fontFace: 'Space Grotesk'
+            })
+          })
+        } else if (slide.id === 'value-props') {
+          newSlide.addText('Value Propositions', {
+            x: 0.5,
+            y: 0.5,
+            w: 9,
+            h: 0.8,
+            fontSize: 40,
+            bold: true,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('Reduce Costs', {
+            x: 0.8,
+            y: 2.0,
+            w: 2.5,
+            h: 0.5,
+            fontSize: 22,
+            bold: true,
+            color: nordlyBlue,
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('Up to 30% average\ncost reduction', {
+            x: 0.8,
+            y: 2.6,
+            w: 2.5,
+            h: 0.8,
+            fontSize: 16,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('Track CO2', {
+            x: 3.75,
+            y: 2.0,
+            w: 2.5,
+            h: 0.5,
+            fontSize: 22,
+            bold: true,
+            color: nordlyGreen,
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('100% accurate carbon\nfootprint tracking', {
+            x: 3.75,
+            y: 2.6,
+            w: 2.5,
+            h: 0.8,
+            fontSize: 16,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('Sustainability', {
+            x: 6.7,
+            y: 2.0,
+            w: 2.5,
+            h: 0.5,
+            fontSize: 22,
+            bold: true,
+            color: nordlyBlue,
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('24/7 continuous\nmonitoring', {
+            x: 6.7,
+            y: 2.6,
+            w: 2.5,
+            h: 0.8,
+            fontSize: 16,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+        } else if (slide.id === 'how-it-works') {
+          newSlide.addText('How It Works', {
+            x: 0.5,
+            y: 0.5,
+            w: 9,
+            h: 0.8,
+            fontSize: 40,
+            bold: true,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('1', {
+            x: 1.0,
+            y: 2.0,
+            w: 0.6,
+            h: 0.6,
+            fontSize: 32,
+            bold: true,
+            color: 'FFFFFF',
+            align: 'center',
+            fill: { color: nordlyBlue },
+            shape: pptx.ShapeType.ellipse
+          })
+          newSlide.addText('Upload Energy Data', {
+            x: 2.0,
+            y: 2.0,
+            w: 7,
+            h: 0.4,
+            fontSize: 20,
+            bold: true,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('CSV, API, or manual entry (2 minutes)', {
+            x: 2.0,
+            y: 2.45,
+            w: 7,
+            h: 0.3,
+            fontSize: 16,
+            color: '718096',
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('2', {
+            x: 1.0,
+            y: 3.2,
+            w: 0.6,
+            h: 0.6,
+            fontSize: 32,
+            bold: true,
+            color: 'FFFFFF',
+            align: 'center',
+            fill: { color: nordlyGreen },
+            shape: pptx.ShapeType.ellipse
+          })
+          newSlide.addText('Get AI Insights', {
+            x: 2.0,
+            y: 3.2,
+            w: 7,
+            h: 0.4,
+            fontSize: 20,
+            bold: true,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('Real-time analysis and recommendations', {
+            x: 2.0,
+            y: 3.65,
+            w: 7,
+            h: 0.3,
+            fontSize: 16,
+            color: '718096',
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('3', {
+            x: 1.0,
+            y: 4.4,
+            w: 0.6,
+            h: 0.6,
+            fontSize: 32,
+            bold: true,
+            color: 'FFFFFF',
+            align: 'center',
+            fill: { color: nordlyBlue },
+            shape: pptx.ShapeType.ellipse
+          })
+          newSlide.addText('Generate ESG Report', {
+            x: 2.0,
+            y: 4.4,
+            w: 7,
+            h: 0.4,
+            fontSize: 20,
+            bold: true,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('Comprehensive reports with CO2 metrics', {
+            x: 2.0,
+            y: 4.85,
+            w: 7,
+            h: 0.3,
+            fontSize: 16,
+            color: '718096',
+            fontFace: 'Space Grotesk'
+          })
+        } else if (slide.id === 'ai-insights') {
+          newSlide.addText('AI Insights', {
+            x: 0.5,
+            y: 0.5,
+            w: 9,
+            h: 0.8,
+            fontSize: 40,
+            bold: true,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('Peak Load Optimization', {
+            x: 0.8,
+            y: 1.8,
+            w: 8.5,
+            h: 0.4,
+            fontSize: 20,
+            bold: true,
+            color: nordlyBlue,
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('Save €2,400/month by shifting operations to off-peak hours', {
+            x: 0.8,
+            y: 2.2,
+            w: 8.5,
+            h: 0.4,
+            fontSize: 16,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('Efficiency Tracking', {
+            x: 0.8,
+            y: 3.0,
+            w: 8.5,
+            h: 0.4,
+            fontSize: 20,
+            bold: true,
+            color: nordlyGreen,
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('12% improvement with LED upgrades, 18-month ROI', {
+            x: 0.8,
+            y: 3.4,
+            w: 8.5,
+            h: 0.4,
+            fontSize: 16,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('Anomaly Detection', {
+            x: 0.8,
+            y: 4.2,
+            w: 8.5,
+            h: 0.4,
+            fontSize: 20,
+            bold: true,
+            color: nordlyBlue,
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('HVAC issues caught early, prevent €800/month loss', {
+            x: 0.8,
+            y: 4.6,
+            w: 8.5,
+            h: 0.4,
+            fontSize: 16,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+        } else if (slide.id === 'pricing') {
+          newSlide.addText('Pricing', {
+            x: 0.5,
+            y: 0.5,
+            w: 9,
+            h: 0.8,
+            fontSize: 40,
+            bold: true,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addShape(pptx.ShapeType.rect, {
+            x: 0.8,
+            y: 1.8,
+            w: 4,
+            h: 3.5,
+            fill: { color: lightGray },
+            line: { color: nordlyBlue, width: 2 }
+          })
+          newSlide.addText('Free', {
+            x: 0.8,
+            y: 2.0,
+            w: 4,
+            h: 0.6,
+            fontSize: 28,
+            bold: true,
+            color: nordlyBlue,
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+          const freeFeatures = ['Basic insights', 'CO2 calculation', '1 ESG report/month']
+          freeFeatures.forEach((feature, i) => {
+            newSlide.addText(`• ${feature}`, {
+              x: 1.2,
+              y: 2.8 + (i * 0.5),
+              w: 3.2,
+              h: 0.4,
+              fontSize: 16,
+              color: darkGray,
+              fontFace: 'Space Grotesk'
+            })
+          })
+          
+          newSlide.addShape(pptx.ShapeType.rect, {
+            x: 5.2,
+            y: 1.8,
+            w: 4,
+            h: 3.5,
+            fill: { color: nordlyBlue },
+            line: { color: nordlyBlue, width: 2 }
+          })
+          newSlide.addText('Premium', {
+            x: 5.2,
+            y: 2.0,
+            w: 4,
+            h: 0.6,
+            fontSize: 28,
+            bold: true,
+            color: 'FFFFFF',
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('€99/month', {
+            x: 5.2,
+            y: 2.6,
+            w: 4,
+            h: 0.4,
+            fontSize: 18,
+            color: 'CBD5E0',
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+          const premiumFeatures = ['Advanced AI insights', 'Unlimited ESG reports', 'API access', 'Team collaboration']
+          premiumFeatures.forEach((feature, i) => {
+            newSlide.addText(`• ${feature}`, {
+              x: 5.6,
+              y: 3.2 + (i * 0.45),
+              w: 3.2,
+              h: 0.35,
+              fontSize: 14,
+              color: 'FFFFFF',
+              fontFace: 'Space Grotesk'
+            })
+          })
+        } else if (slide.id === 'roi') {
+          newSlide.addText('ROI & Results', {
+            x: 0.5,
+            y: 0.5,
+            w: 9,
+            h: 0.8,
+            fontSize: 40,
+            bold: true,
+            color: darkGray,
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('30%', {
+            x: 1.0,
+            y: 2.0,
+            w: 3.5,
+            h: 0.8,
+            fontSize: 60,
+            bold: true,
+            color: nordlyBlue,
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('Average energy\ncost reduction', {
+            x: 1.0,
+            y: 2.9,
+            w: 3.5,
+            h: 0.6,
+            fontSize: 16,
+            color: darkGray,
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('18 mo', {
+            x: 5.5,
+            y: 2.0,
+            w: 3.5,
+            h: 0.8,
+            fontSize: 60,
+            bold: true,
+            color: nordlyGreen,
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('Average ROI\nachievement', {
+            x: 5.5,
+            y: 2.9,
+            w: 3.5,
+            h: 0.6,
+            fontSize: 16,
+            color: darkGray,
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+          
+          newSlide.addText('€2,400/month potential savings from optimization', {
+            x: 1.0,
+            y: 4.2,
+            w: 8,
+            h: 0.5,
+            fontSize: 18,
+            color: darkGray,
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('100% accurate CO2 tracking for ESG compliance', {
+            x: 1.0,
+            y: 4.8,
+            w: 8,
+            h: 0.5,
+            fontSize: 18,
+            color: darkGray,
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+        } else if (slide.id === 'cta') {
+          newSlide.background = { color: nordlyBlue }
+          newSlide.addText('Get your free ESG report today', {
+            x: 0.5,
+            y: 2.0,
+            w: 9,
+            h: 1.0,
+            fontSize: 40,
+            bold: true,
+            color: 'FFFFFF',
+            align: 'center',
+            fontFace: 'Space Grotesk'
+          })
+          newSlide.addText('✓ No credit card required\n✓ Setup in 2 minutes\n✓ Start saving immediately', {
+            x: 2.5,
+            y: 3.2,
+            w: 5,
+            h: 1.5,
+            fontSize: 20,
+            color: 'E2E8F0',
+            align: 'center',
+            lineSpacing: 40,
+            fontFace: 'Space Grotesk'
+          })
+        }
+      })
+
+      await pptx.writeFile({ fileName: 'Nordly-Presentation.pptx' })
+      toast.success('PowerPoint presentation downloaded!')
+    } catch (error) {
+      toast.error('Failed to generate PowerPoint. Please try again.')
+      console.error('PowerPoint generation error:', error)
+    } finally {
+      setIsGeneratingPptx(false)
     }
   }
 
@@ -339,13 +904,32 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
 
                 <div className="space-y-4">
                   <Button
+                    onClick={generatePowerPoint}
+                    disabled={isGeneratingPptx || enabledCount === 0}
+                    className="w-full bg-primary hover:bg-accent text-primary-foreground h-12 text-base font-medium shadow-lg hover:shadow-xl transition-all"
+                  >
+                    {isGeneratingPptx ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Presentation size={20} weight="bold" className="mr-2" />
+                        Generate PowerPoint
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
                     onClick={generatePresentation}
                     disabled={isGenerating || enabledCount === 0}
-                    className="w-full bg-primary hover:bg-accent text-primary-foreground h-12 text-base font-medium shadow-lg hover:shadow-xl transition-all"
+                    variant="outline"
+                    className="w-full h-12 text-base font-medium border-2 hover:border-primary hover:bg-primary/5"
                   >
                     {isGenerating ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                        <div className="w-4 h-4 border-2 border-foreground border-t-transparent rounded-full animate-spin mr-2" />
                         Generating...
                       </>
                     ) : (
@@ -369,31 +953,27 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
 
                 <div className="mt-8 p-4 rounded-xl bg-muted/50">
                   <h3 className="font-semibold text-foreground mb-2">
-                    What you'll get:
+                    Export formats:
                   </h3>
                   <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">
                       <Check size={16} weight="bold" className="text-primary mt-0.5 flex-shrink-0" />
-                      <span>AI-generated slide outlines</span>
+                      <span><strong>PowerPoint (.pptx)</strong>: Fully formatted presentation</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check size={16} weight="bold" className="text-primary mt-0.5 flex-shrink-0" />
-                      <span>Key points for each slide</span>
+                      <span><strong>JSON</strong>: AI-generated slide outlines</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <Check size={16} weight="bold" className="text-primary mt-0.5 flex-shrink-0" />
-                      <span>Visual suggestions</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check size={16} weight="bold" className="text-primary mt-0.5 flex-shrink-0" />
-                      <span>Ready to use in PowerPoint</span>
+                      <span><strong>Markdown</strong>: Text-based content export</span>
                     </li>
                   </ul>
                 </div>
 
                 <div className="mt-6 p-4 rounded-xl bg-accent/10 border-2 border-accent/20">
                   <p className="text-sm text-foreground">
-                    <strong>Pro tip:</strong> Use the JSON outline to build your presentation in PowerPoint, Google Slides, or any presentation software.
+                    <strong>Pro tip:</strong> The PowerPoint export creates a ready-to-use presentation with Nordly branding and professional formatting.
                   </p>
                 </div>
               </Card>
