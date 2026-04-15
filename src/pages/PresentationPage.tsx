@@ -171,6 +171,8 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
     }
 
     setIsGeneratingPptx(true)
+    console.log('=== PowerPoint Generation Started ===')
+    console.log('Enabled slides:', enabledSlides.map(s => s.title))
 
     try {
       const pptx = new pptxgen()
@@ -734,18 +736,37 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
         }
       })
 
-      const blob = await pptx.write({ outputType: 'blob' }) as Blob
+      console.log('Starting PowerPoint write process...')
+      const pptxData = await pptx.write({ outputType: 'blob' })
+      console.log('PowerPoint write completed, data type:', typeof pptxData)
+      
+      const blob = pptxData instanceof Blob ? pptxData : new Blob([pptxData as BlobPart], { 
+        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
+      })
+      
+      console.log('Blob created, size:', blob.size, 'bytes')
+      
+      if (blob.size === 0) {
+        throw new Error('Generated file is empty')
+      }
       
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = 'Nordly-Presentation.pptx'
+      a.style.display = 'none'
       document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
       
-      toast.success('PowerPoint presentation downloaded successfully!')
+      console.log('Triggering download...')
+      a.click()
+      
+      setTimeout(() => {
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        console.log('Download cleanup completed')
+      }, 100)
+      
+      toast.success('PowerPoint presentation downloaded successfully! Check your Downloads folder.')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       toast.error(`Failed to generate PowerPoint: ${errorMessage}`)
