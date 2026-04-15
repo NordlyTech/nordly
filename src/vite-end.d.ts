@@ -21,6 +21,22 @@ declare global {
         delete: (key: string) => Promise<void>
       }
     }
+    showSaveFilePicker?: (options?: {
+      suggestedName?: string
+      types?: {
+        description?: string
+        accept: Record<string, string[]>
+      }[]
+    }) => Promise<FileSystemFileHandle>
+  }
+
+  interface FileSystemFileHandle {
+    createWritable: () => Promise<FileSystemWritableFileStream>
+  }
+
+  interface FileSystemWritableFileStream {
+    write: (data: Blob | BufferSource | string | { type: 'write'; data: Blob | BufferSource | string }) => Promise<void>
+    close: () => Promise<void>
   }
 
   const spark: Window['spark']

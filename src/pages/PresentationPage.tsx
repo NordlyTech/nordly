@@ -712,8 +712,37 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
         }
       })
 
-      await pptx.writeFile({ fileName: 'Nordly-Presentation.pptx' })
-      toast.success('PowerPoint presentation downloaded!')
+      const pptxData = await pptx.write({ outputType: 'blob' }) as Blob
+
+      if (window.showSaveFilePicker) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: 'Nordly-Presentation.pptx',
+            types: [{
+              description: 'PowerPoint Presentation',
+              accept: { 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] }
+            }]
+          })
+          const writable = await handle.createWritable()
+          await writable.write(pptxData)
+          await writable.close()
+          toast.success('PowerPoint presentation saved successfully!')
+        } catch (err) {
+          if ((err as Error).name !== 'AbortError') {
+            throw err
+          }
+        }
+      } else {
+        const url = URL.createObjectURL(pptxData)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'Nordly-Presentation.pptx'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        toast.success('PowerPoint presentation downloaded to your default folder!')
+      }
     } catch (error) {
       toast.error('Failed to generate PowerPoint. Please try again.')
       console.error('PowerPoint generation error:', error)
