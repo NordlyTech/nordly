@@ -361,6 +361,13 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
             fontFace: 'Space Grotesk'
           })
           
+          newSlide.addShape(pptx.ShapeType.ellipse, {
+            x: 1.0,
+            y: 2.0,
+            w: 0.6,
+            h: 0.6,
+            fill: { color: nordlyBlue }
+          })
           newSlide.addText('1', {
             x: 1.0,
             y: 2.0,
@@ -370,8 +377,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
             bold: true,
             color: 'FFFFFF',
             align: 'center',
-            fill: { color: nordlyBlue },
-            shape: pptx.ShapeType.ellipse
+            valign: 'middle'
           })
           newSlide.addText('Upload Energy Data', {
             x: 2.0,
@@ -393,6 +399,13 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
             fontFace: 'Space Grotesk'
           })
           
+          newSlide.addShape(pptx.ShapeType.ellipse, {
+            x: 1.0,
+            y: 3.2,
+            w: 0.6,
+            h: 0.6,
+            fill: { color: nordlyGreen }
+          })
           newSlide.addText('2', {
             x: 1.0,
             y: 3.2,
@@ -402,8 +415,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
             bold: true,
             color: 'FFFFFF',
             align: 'center',
-            fill: { color: nordlyGreen },
-            shape: pptx.ShapeType.ellipse
+            valign: 'middle'
           })
           newSlide.addText('Get AI Insights', {
             x: 2.0,
@@ -425,6 +437,13 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
             fontFace: 'Space Grotesk'
           })
           
+          newSlide.addShape(pptx.ShapeType.ellipse, {
+            x: 1.0,
+            y: 4.4,
+            w: 0.6,
+            h: 0.6,
+            fill: { color: nordlyBlue }
+          })
           newSlide.addText('3', {
             x: 1.0,
             y: 4.4,
@@ -434,8 +453,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
             bold: true,
             color: 'FFFFFF',
             align: 'center',
-            fill: { color: nordlyBlue },
-            shape: pptx.ShapeType.ellipse
+            valign: 'middle'
           })
           newSlide.addText('Generate ESG Report', {
             x: 2.0,
@@ -715,7 +733,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
         }
       })
 
-      const pptxData = await pptx.write({ outputType: 'blob' })
+      const pptxData = await pptx.write({ outputType: 'blob' }) as Blob
 
       if (window.showSaveFilePicker) {
         try {
@@ -736,7 +754,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
           }
         }
       } else {
-        const url = URL.createObjectURL(pptxData as Blob)
+        const url = URL.createObjectURL(pptxData)
         const a = document.createElement('a')
         a.href = url
         a.download = 'Nordly-Presentation.pptx'
