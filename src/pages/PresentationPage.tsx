@@ -749,19 +749,10 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
       })
 
       addLog('Starting PowerPoint write process...')
-      const pptxData = await pptx.write({ outputType: 'base64' })
-      addLog(`PowerPoint write completed as base64, length: ${(pptxData as string).length}`)
+      const pptxData = await pptx.write({ outputType: 'blob' })
+      addLog(`PowerPoint write completed as blob`)
       
-      const byteCharacters = atob(pptxData as string)
-      const byteNumbers = new Array(byteCharacters.length)
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i)
-      }
-      const byteArray = new Uint8Array(byteNumbers)
-      
-      const blob = new Blob([byteArray], { 
-        type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
-      })
+      const blob = pptxData as Blob
       
       addLog(`Blob created, size: ${blob.size} bytes, type: ${blob.type}`)
       
@@ -774,10 +765,8 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
       addLog(`Blob URL created: ${url}`)
       
       const a = document.createElement('a')
-      a.style.display = 'none'
       a.href = url
       a.download = fileName
-      a.setAttribute('target', '_blank')
       document.body.appendChild(a)
       addLog('Download link created and appended to body')
       addLog(`Element href: ${a.href}`)
@@ -793,7 +782,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
         }
         URL.revokeObjectURL(url)
         addLog('Blob URL revoked')
-      }, 100)
+      }, 250)
       
       toast.success(`PowerPoint "${fileName}" download started! Check your Downloads folder.`)
       addLog('✓ Download initiated successfully!')
