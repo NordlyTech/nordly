@@ -749,11 +749,17 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
       })
 
       addLog('Starting PowerPoint write process...')
-      const pptxData = await pptx.write({ outputType: 'blob' })
-      addLog(`PowerPoint write completed, data type: ${typeof pptxData}`)
-      addLog(`Is Blob? ${pptxData instanceof Blob}`)
+      const pptxData = await pptx.write({ outputType: 'base64' })
+      addLog(`PowerPoint write completed as base64, length: ${(pptxData as string).length}`)
       
-      const blob = pptxData instanceof Blob ? pptxData : new Blob([pptxData as BlobPart], { 
+      const byteCharacters = atob(pptxData as string)
+      const byteNumbers = new Array(byteCharacters.length)
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i)
+      }
+      const byteArray = new Uint8Array(byteNumbers)
+      
+      const blob = new Blob([byteArray], { 
         type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
       })
       
@@ -763,35 +769,40 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
         throw new Error('Generated PowerPoint file is empty - no slides were created')
       }
       
+      const fileName = `Nordly-Presentation-${new Date().getTime()}.pptx`
       const url = URL.createObjectURL(blob)
       addLog(`Blob URL created: ${url}`)
       
-      const fileName = `Nordly-Presentation-${new Date().getTime()}.pptx`
       const a = document.createElement('a')
+      a.style.display = 'none'
       a.href = url
       a.download = fileName
-      a.setAttribute('download', fileName)
+      a.setAttribute('target', '_blank')
       
       document.body.appendChild(a)
       addLog('Download link created and appended to body')
       addLog(`File name: ${fileName}`)
-      addLog(`Download URL: ${url}`)
+      addLog(`Element href: ${a.href}`)
+      addLog(`Element download attribute: ${a.download}`)
       
+      addLog('Triggering download via click()...')
       a.click()
-      addLog('Download triggered via click() - browser should show download dialog')
+      addLog('Click event triggered')
       
       setTimeout(() => {
         if (document.body.contains(a)) {
           document.body.removeChild(a)
+          addLog('Download link removed from DOM')
         }
         URL.revokeObjectURL(url)
-        addLog('Download cleanup completed - link removed and URL revoked')
-      }, 250)
+        addLog('Blob URL revoked')
+      }, 100)
       
-      toast.success(`PowerPoint "${fileName}" should be downloading! Check your browser's Downloads folder.`, {
+      toast.success(`PowerPoint "${fileName}" download started! Check your Downloads folder.`, {
         duration: 5000,
       })
       addLog('✓ Download initiated successfully!')
+      addLog(`Check your browser's Downloads folder for: ${fileName}`)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       addLog(`❌ ERROR: ${errorMessage}`)
