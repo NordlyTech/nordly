@@ -2,10 +2,10 @@ import { Button } from '@/components/ui/button';
 
 const PRODUCT_APP_URL = 'http://localhost:3000';
 
-export function FinalCTA() {
-  return (
-    <section className="py-20 px-6 bg-gradient-to-br from-primary/10 to-accent/10">
-      <div className="container mx-auto max-w-4xl text-center">
+        <h2 className="text-
+        </
+          Join leading companies who are saving millions with intelligent equipment
+        <div className="flex flex-col sm:flex-row gap-4 justify
         <h2 className="text-4xl md:text-5xl font-bold mb-6">
           Ready to Optimize Your Equipment?
         </h2>
@@ -14,28 +14,16 @@ export function FinalCTA() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button 
-            size="lg"
+  );
             onClick={() => window.location.href = PRODUCT_APP_URL}
-          >
+
             Get Started
           </Button>
         </div>
-      </div>
+
     </section>
-  );
+
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
