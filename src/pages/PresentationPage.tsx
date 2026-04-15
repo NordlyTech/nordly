@@ -1027,7 +1027,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
                     variant="outline"
                     className="w-full h-12 text-base font-medium border-2 hover:border-primary hover:bg-primary/5"
                   >
-                    <FileText size={20} weight="bold" className="mr-2" />
+                  </Button>
                     Export Markdown
                   </Button>
                 </div>
