@@ -749,33 +749,11 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
       })
 
       addLog('Starting PowerPoint write process...')
-      const pptxData = await pptx.write({ outputType: 'blob' })
-      addLog(`PowerPoint write completed as blob`)
-      
-      const blob = pptxData as Blob
       const fileName = `Nordly-Presentation-${Date.now()}.pptx`
-      const url = URL.createObjectURL(blob)
-      addLog(`Blob URL created: ${url}`)
-      addLog(`File name: ${fileName}`)
       
-      const a = document.createElement('a')
-      a.href = url
-      a.download = fileName
-      document.body.appendChild(a)
-      addLog('Download link created and appended to body')
-      addLog(`Element href: ${a.href}`)
-      addLog(`Element download attribute: ${a.download}`)
-      addLog('Triggering download via click()...')
-      a.click()
-      addLog('Click event triggered')
-      setTimeout(() => {
-        document.body.removeChild(a)
-        if (document.body.contains(a)) {
-          addLog('Download link removed from DOM')
-        }
-        URL.revokeObjectURL(url)
-        addLog('Blob URL revoked')
-      }, 250)
+      addLog(`Calling pptx.writeFile("${fileName}")...`)
+      await pptx.writeFile({ fileName })
+      addLog('writeFile() completed')
       
       toast.success(`PowerPoint "${fileName}" download started! Check your Downloads folder.`)
       addLog('✓ Download initiated successfully!')
