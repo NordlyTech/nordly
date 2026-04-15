@@ -79,7 +79,6 @@ export function PresentationPage() {
 
   const [isGenerating, setIsGenerating] = useState(false)
   const [isGeneratingPptx, setIsGeneratingPptx] = useState(false)
-  const [filename, setFilename] = useKV('pptx-filename', 'Nordly-Presentation')
 
   const toggleSlide = (id: string) => {
     setSlides(slides.map(slide => 
@@ -718,13 +717,10 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
 
       const pptxData = await pptx.write({ outputType: 'blob' })
 
-      const sanitizedFilename = filename.trim() || 'Nordly-Presentation'
-      const pptxFilename = sanitizedFilename.endsWith('.pptx') ? sanitizedFilename : `${sanitizedFilename}.pptx`
-
       if (window.showSaveFilePicker) {
         try {
           const handle = await window.showSaveFilePicker({
-            suggestedName: pptxFilename,
+            suggestedName: 'Nordly-Presentation.pptx',
             types: [{
               description: 'PowerPoint Presentation',
               accept: { 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] }
@@ -743,7 +739,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
         const url = URL.createObjectURL(pptxData as Blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = pptxFilename
+        a.download = 'Nordly-Presentation.pptx'
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
@@ -937,23 +933,6 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
                 <h2 className="text-xl font-semibold text-foreground mb-6">
                   Export Options
                 </h2>
-
-                <div className="mb-6">
-                  <Label htmlFor="filename" className="text-sm font-medium text-foreground mb-2 block">
-                    PowerPoint Filename
-                  </Label>
-                  <Input
-                    id="filename"
-                    type="text"
-                    value={filename}
-                    onChange={(e) => setFilename(e.target.value)}
-                    placeholder="Nordly-Presentation"
-                    className="h-10"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1.5">
-                    .pptx extension will be added automatically
-                  </p>
-                </div>
 
                 <div className="space-y-4">
                   <Button
