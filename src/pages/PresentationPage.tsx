@@ -175,6 +175,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
     try {
       const pptx = new pptxgen()
       
+      pptx.layout = 'LAYOUT_16x9'
       pptx.author = 'Nordly'
       pptx.company = 'Nordly'
       pptx.title = 'Nordly - Energy Optimization & ESG Reporting'
@@ -733,39 +734,12 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
         }
       })
 
-      const pptxData = await pptx.write({ outputType: 'blob' }) as Blob
-
-      if (window.showSaveFilePicker) {
-        try {
-          const handle = await window.showSaveFilePicker({
-            suggestedName: 'Nordly-Presentation.pptx',
-            types: [{
-              description: 'PowerPoint Presentation',
-              accept: { 'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'] }
-            }]
-          })
-          const writable = await handle.createWritable()
-          await writable.write(pptxData)
-          await writable.close()
-          toast.success('PowerPoint presentation saved successfully!')
-        } catch (err) {
-          if ((err as Error).name !== 'AbortError') {
-            throw err
-          }
-        }
-      } else {
-        const url = URL.createObjectURL(pptxData)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'Nordly-Presentation.pptx'
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-        toast.success('PowerPoint presentation downloaded to your default folder!')
-      }
+      await pptx.writeFile({ fileName: 'Nordly-Presentation.pptx' })
+      
+      toast.success('PowerPoint presentation downloaded successfully!')
     } catch (error) {
-      toast.error('Failed to generate PowerPoint. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(`Failed to generate PowerPoint: ${errorMessage}`)
       console.error('PowerPoint generation error:', error)
     } finally {
       setIsGeneratingPptx(false)
