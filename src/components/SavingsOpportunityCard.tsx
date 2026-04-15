@@ -2,9 +2,16 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Fan, Lightbulb, HardDrives, ForkKnife, TrendUp, CurrencyEur, CalendarBlank } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
-import { Equipment } from '@/components/EquipmentOptimization'
 
-const EQUIPMENT_ICONS = {
+type EquipmentType = 'hvac' | 'lighting' | 'servers' | 'kitchen'
+
+interface Equipment {
+  type: EquipmentType
+  name: string
+  age: number
+}
+
+const EQUIPMENT_ICONS: Record<EquipmentType, typeof Fan> = {
   hvac: Fan,
   lighting: Lightbulb,
   servers: HardDrives,
