@@ -773,49 +773,48 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
       const url = URL.createObjectURL(blob)
       addLog(`Blob URL created: ${url}`)
       
-      const a = document.createElement('a')
       a.style.display = 'none'
-      a.href = url
+      a.style.display = 'none'
+      a.download = fileName
       a.download = fileName
       a.setAttribute('target', '_blank')
-      
       document.body.appendChild(a)
       addLog('Download link created and appended to body')
-      addLog(`File name: ${fileName}`)
+      addLog('Download link created and appended to body')
+      addLog(`Element href: ${a.href}`)
       addLog(`Element href: ${a.href}`)
       addLog(`Element download attribute: ${a.download}`)
-      
       addLog('Triggering download via click()...')
-      a.click()
+      addLog('Triggering download via click()...')
       addLog('Click event triggered')
-      
+      addLog('Click event triggered')
       setTimeout(() => {
         if (document.body.contains(a)) {
           document.body.removeChild(a)
+          addLog('Download link removed from DOM')
           addLog('Download link removed from DOM')
         }
         URL.revokeObjectURL(url)
         addLog('Blob URL revoked')
       }, 100)
-      
       toast.success(`PowerPoint "${fileName}" download started! Check your Downloads folder.`, {
-        duration: 5000,
+      toast.success(`PowerPoint "${fileName}" download started! Check your Downloads folder.`, {
       })
       addLog('✓ Download initiated successfully!')
       addLog(`Check your browser's Downloads folder for: ${fileName}`)
-    } catch (error) {
+      addLog(`Check your browser's Downloads folder for: ${fileName}`)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      addLog(`❌ ERROR: ${errorMessage}`)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       toast.error(`Failed to generate PowerPoint: ${errorMessage}`)
       console.error('PowerPoint generation error:', error)
-    } finally {
-      setIsGeneratingPptx(false)
+      console.error('PowerPoint generation error:', error)
+    } finally {lse)
       addLog('=== Generation process completed ===')
-    }
+      addLog('=== Generation process completed ===')
   }
 
   const exportToMarkdown = () => {
-    const enabledSlides = slides.filter(s => s.enabled)
+  const exportToMarkdown = () => {
     
     if (enabledSlides.length === 0) {
       toast.error('Please select at least one slide')
