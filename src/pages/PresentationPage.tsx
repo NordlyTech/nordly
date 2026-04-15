@@ -734,7 +734,16 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
         }
       })
 
-      await pptx.writeFile({ fileName: 'Nordly-Presentation.pptx' })
+      const pptxBlob = await pptx.write({ outputType: 'blob' })
+      
+      const url = URL.createObjectURL(pptxBlob as Blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'Nordly-Presentation.pptx'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
       
       toast.success('PowerPoint presentation downloaded successfully!')
     } catch (error) {
