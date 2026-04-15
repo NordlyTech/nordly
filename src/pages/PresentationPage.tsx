@@ -712,7 +712,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
         }
       })
 
-      const pptxData = await pptx.write({ outputType: 'blob' }) as Blob
+      const pptxData = await pptx.write({ outputType: 'blob' })
 
       if (window.showSaveFilePicker) {
         try {
@@ -733,7 +733,7 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
           }
         }
       } else {
-        const url = URL.createObjectURL(pptxData)
+        const url = URL.createObjectURL(pptxData as Blob)
         const a = document.createElement('a')
         a.href = url
         a.download = 'Nordly-Presentation.pptx'
