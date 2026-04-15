@@ -79,6 +79,7 @@ export function PresentationPage() {
 
   const [isGenerating, setIsGenerating] = useState(false)
   const [isGeneratingPptx, setIsGeneratingPptx] = useState(false)
+  const [downloadLogs, setDownloadLogs] = useState<string[]>([])
 
   const toggleSlide = (id: string) => {
     setSlides(slides.map(slide => 
@@ -162,6 +163,16 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
     }
   }
 
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString()
+    setDownloadLogs(prev => [...prev, `[${timestamp}] ${message}`])
+    console.log(message)
+  }
+
+  const clearLogs = () => {
+    setDownloadLogs([])
+  }
+
   const generatePowerPoint = async () => {
     const enabledSlides = slides.filter(s => s.enabled)
     
@@ -171,8 +182,9 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
     }
 
     setIsGeneratingPptx(true)
-    console.log('=== PowerPoint Generation Started ===')
-    console.log('Enabled slides:', enabledSlides.map(s => s.title))
+    clearLogs()
+    addLog('=== PowerPoint Generation Started ===')
+    addLog(`Enabled slides: ${enabledSlides.map(s => s.title).join(', ')}`)
 
     try {
       const pptx = new pptxgen()
@@ -736,43 +748,58 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
         }
       })
 
-      console.log('Starting PowerPoint write process...')
+      addLog('Starting PowerPoint write process...')
       const pptxData = await pptx.write({ outputType: 'blob' })
-      console.log('PowerPoint write completed, data type:', typeof pptxData)
+      addLog(`PowerPoint write completed, data type: ${typeof pptxData}`)
+      addLog(`Is Blob? ${pptxData instanceof Blob}`)
       
       const blob = pptxData instanceof Blob ? pptxData : new Blob([pptxData as BlobPart], { 
         type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' 
       })
       
-      console.log('Blob created, size:', blob.size, 'bytes')
+      addLog(`Blob created, size: ${blob.size} bytes, type: ${blob.type}`)
       
       if (blob.size === 0) {
-        throw new Error('Generated file is empty')
+        throw new Error('Generated PowerPoint file is empty - no slides were created')
       }
       
       const url = URL.createObjectURL(blob)
+      addLog(`Blob URL created: ${url}`)
+      
+      const fileName = `Nordly-Presentation-${new Date().getTime()}.pptx`
       const a = document.createElement('a')
       a.href = url
-      a.download = 'Nordly-Presentation.pptx'
-      a.style.display = 'none'
-      document.body.appendChild(a)
+      a.download = fileName
+      a.setAttribute('download', fileName)
       
-      console.log('Triggering download...')
+      document.body.appendChild(a)
+      addLog('Download link created and appended to body')
+      addLog(`File name: ${fileName}`)
+      addLog(`Download URL: ${url}`)
+      
       a.click()
+      addLog('Download triggered via click() - browser should show download dialog')
       
       setTimeout(() => {
-        document.body.removeChild(a)
+        if (document.body.contains(a)) {
+          document.body.removeChild(a)
+        }
         URL.revokeObjectURL(url)
-        console.log('Download cleanup completed')
-      }, 100)
+        addLog('Download cleanup completed - link removed and URL revoked')
+      }, 250)
       
-      toast.success('PowerPoint presentation downloaded successfully! Check your Downloads folder.')
+      toast.success(`PowerPoint "${fileName}" should be downloading! Check your browser's Downloads folder.`, {
+        duration: 5000,
+      })
+      addLog('✓ Download initiated successfully!')
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addLog(`❌ ERROR: ${errorMessage}`)
       toast.error(`Failed to generate PowerPoint: ${errorMessage}`)
       console.error('PowerPoint generation error:', error)
     } finally {
       setIsGeneratingPptx(false)
+      addLog('=== Generation process completed ===')
     }
   }
 
@@ -1033,6 +1060,46 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
               </Card>
             </div>
           </div>
+
+          {downloadLogs.length > 0 && (
+            <Card className="mt-8 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-foreground">
+                  Download Debug Log
+                </h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearLogs}
+                >
+                  Clear
+                </Button>
+              </div>
+              <div className="bg-secondary/20 rounded-xl p-4 max-h-96 overflow-y-auto font-mono text-sm">
+                {downloadLogs.map((log, index) => (
+                  <div 
+                    key={index} 
+                    className={`py-1 ${
+                      log.includes('ERROR') ? 'text-destructive' : 
+                      log.includes('✓') ? 'text-accent' : 
+                      'text-muted-foreground'
+                    }`}
+                  >
+                    {log}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 p-3 rounded-lg bg-primary/10 text-sm">
+                <p className="font-semibold text-primary mb-1">Troubleshooting:</p>
+                <ul className="text-muted-foreground space-y-1 text-xs">
+                  <li>• If the file size shows &gt;0 bytes but no download appears, check your browser's download settings</li>
+                  <li>• Some browsers block automatic downloads - look for a popup blocker notification</li>
+                  <li>• Check your browser's Downloads folder (usually Ctrl/Cmd + J to view)</li>
+                  <li>• Try a different browser if the issue persists</li>
+                </ul>
+              </div>
+            </Card>
+          )}
         </div>
       </main>
 
