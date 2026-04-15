@@ -751,13 +751,25 @@ Each slide object should have: title, keyPoints (array of strings), visualSugges
       addLog('Starting PowerPoint write process...')
       const fileName = `Nordly-Presentation-${Date.now()}.pptx`
       
-      addLog(`Calling pptx.writeFile("${fileName}")...`)
-      await pptx.writeFile({ fileName })
-      addLog('writeFile() completed')
+      addLog(`Generating PowerPoint file: ${fileName}`)
+      const pptxBlob = await pptx.write({ outputType: 'blob' }) as Blob
+      addLog(`File generated successfully. Size: ${(pptxBlob.size / 1024).toFixed(2)} KB`)
       
-      toast.success(`PowerPoint "${fileName}" download started! Check your Downloads folder.`)
-      addLog('✓ Download initiated successfully!')
-      addLog(`Check your browser's Downloads folder for: ${fileName}`)
+      addLog('Creating download link...')
+      const url = URL.createObjectURL(pptxBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      addLog('Triggering download...')
+      a.click()
+      addLog('Click triggered, cleaning up...')
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      
+      toast.success(`PowerPoint "${fileName}" downloaded successfully!`)
+      addLog('✓ Download completed successfully!')
+      addLog(`File saved to your Downloads folder: ${fileName}`)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       toast.error(`Failed to generate PowerPoint: ${errorMessage}`)
