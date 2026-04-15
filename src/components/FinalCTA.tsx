@@ -1,27 +1,19 @@
 import { Button } from '@/components/ui/button';
 
-
 const PRODUCT_APP_URL = 'http://localhost:3000';
 
 export function FinalCTA() {
-        </
-        <h2 className="text-4xl md:text-5xl font-bold mb
+  return (
+    <section className="py-20 px-4">
+      <div className="max-w-4xl mx-auto text-center">
+        <h2 className="text-4xl md:text-5xl font-bold mb-6">
+          Ready to Optimize Your Equipment?
         </h2>
-        <p className="text-xl text-muted-foreground mb-10 max
+        <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
+          Join leading companies who are saving millions with intelligent equipment optimization.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            si
-        
-            Start Free Trial
           <Button 
-            v
-        
-            Schedule a demo
-        </div>
-    </sectio
-}
-
-
             size="lg" 
             className="text-lg px-8 py-6"
             onClick={() => window.location.href = `${PRODUCT_APP_URL}/signup`}
