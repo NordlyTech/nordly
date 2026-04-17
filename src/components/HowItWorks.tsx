@@ -1,28 +1,33 @@
-import { UploadSimple, Lightning, FileText } from '@phosphor-icons/react'
+import { Buildings, Lightning, Rocket, ChartLineUp } from '@phosphor-icons/react'
 import { Card } from '@/components/ui/card'
 import { motion } from 'framer-motion'
 
 const steps = [
   {
-    icon: UploadSimple,
-    title: 'Upload energy data',
-    description: 'Import your energy consumption data from any source—CSV, API, or manual entry. Takes less than 2 minutes.',
+    icon: Buildings,
+    title: 'Add your locations',
+    description: 'Choose location type such as office, hotel, retail, or warehouse.',
   },
   {
     icon: Lightning,
     title: 'Get AI insights',
-    description: 'Our AI analyzes patterns, identifies inefficiencies, and finds cost-saving opportunities in real-time.',
+    description: 'Nordly analyzes your context and identifies savings opportunities.',
   },
   {
-    icon: FileText,
-    title: 'Generate ESG report',
-    description: 'Receive comprehensive ESG reports with CO2 metrics, compliance data, and actionable recommendations.',
+    icon: Rocket,
+    title: 'Turn insights into missions',
+    description: 'Convert recommendations into clear actions for your team.',
+  },
+  {
+    icon: ChartLineUp,
+    title: 'Track savings',
+    description: 'See expected and real savings over time.',
   },
 ]
 
 export function HowItWorks() {
   return (
-    <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+    <section id="how-it-works" className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <motion.h2
@@ -41,18 +46,18 @@ export function HowItWorks() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-lg text-muted-foreground max-w-2xl mx-auto"
           >
-            From data to insights in three simple steps
+            Locations to savings in four simple steps
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {steps.map((step, index) => (
             <motion.div
-              key={index}
+              key={step.title}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.15 }}
+              transition={{ duration: 0.5, delay: index * 0.12 }}
             >
               <Card className="relative p-8 h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-2 hover:border-primary/20">
                 <div className="absolute -top-4 left-8">

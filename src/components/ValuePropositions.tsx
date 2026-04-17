@@ -1,4 +1,4 @@
-import { TrendDown, Leaf, Recycle } from '@phosphor-icons/react'
+import { TrendDown, Rocket, ChartLineUp, FileText } from '@phosphor-icons/react'
 import { Card } from '@/components/ui/card'
 import { motion } from 'framer-motion'
 
@@ -6,23 +6,30 @@ const values = [
   {
     icon: TrendDown,
     title: 'Reduce costs',
-    description: 'Identify energy waste and optimization opportunities that can reduce your energy bills by up to 30%.',
-    stat: '30%',
-    statLabel: 'Average cost reduction',
+    description: 'Identify inefficiencies and reduce energy costs by up to 30%.',
+    stat: 'Up to 30%',
+    statLabel: 'Cost reduction potential',
   },
   {
-    icon: Leaf,
-    title: 'Understand CO2 footprint',
-    description: 'Get precise carbon emission calculations and track your environmental impact over time with detailed analytics.',
-    stat: '100%',
-    statLabel: 'Accurate tracking',
+    icon: Rocket,
+    title: 'Take action',
+    description: 'Turn AI insights into missions your team can execute.',
+    stat: 'Faster',
+    statLabel: 'From insight to action',
   },
   {
-    icon: Recycle,
-    title: 'Improve sustainability',
-    description: 'Meet ESG requirements and demonstrate your commitment to sustainability with comprehensive reporting.',
-    stat: '24/7',
-    statLabel: 'Continuous monitoring',
+    icon: ChartLineUp,
+    title: 'Track savings',
+    description: 'See expected and real savings across locations.',
+    stat: 'Live',
+    statLabel: 'Savings visibility',
+  },
+  {
+    icon: FileText,
+    title: 'ESG reporting',
+    description: 'Generate ESG reports automatically from real improvements.',
+    stat: 'Auto',
+    statLabel: 'Reporting generated',
   },
 ]
 
@@ -38,7 +45,7 @@ export function ValuePropositions() {
             transition={{ duration: 0.5 }}
             className="text-4xl sm:text-5xl font-bold text-foreground mb-4"
           >
-            Why companies choose Nordly
+            Built to reduce costs and prove outcomes
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -47,18 +54,18 @@ export function ValuePropositions() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-lg text-muted-foreground max-w-2xl mx-auto"
           >
-            Transform your energy management with AI-powered insights
+            Nordly helps teams find waste, execute improvements, and document impact at scale.
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {values.map((value, index) => (
             <motion.div
-              key={index}
+              key={value.title}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.15 }}
+              transition={{ duration: 0.5, delay: index * 0.12 }}
             >
               <Card className="p-8 h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white border-2 hover:border-primary/20">
                 <div className="w-14 h-14 rounded-2xl bg-secondary flex items-center justify-center mb-6">

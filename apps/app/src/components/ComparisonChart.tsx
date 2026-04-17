@@ -7,9 +7,10 @@ import { Buildings } from '@phosphor-icons/react'
 interface ComparisonChartProps {
   userValue: number
   locationType: string
+  potentialImprovementEuro: number
 }
 
-export function ComparisonChart({ userValue, locationType }: ComparisonChartProps) {
+export function ComparisonChart({ userValue, locationType, potentialImprovementEuro }: ComparisonChartProps) {
   const averageByType: Record<string, number> = {
     'Office': 8500,
     'Retail Store': 12000,
@@ -41,9 +42,12 @@ export function ComparisonChart({ userValue, locationType }: ComparisonChartProp
           <p className="text-sm text-muted-foreground">
             Your consumption is{' '}
             <span className={`font-semibold ${isAboveAverage ? 'text-accent' : 'text-primary'}`}>
-              {Math.abs(Number(difference))}% {isAboveAverage ? 'lower' : 'higher'}
+              {Math.abs(Number(difference))}% {isAboveAverage ? 'higher' : 'lower'}
             </span>
             {' '}than similar {locationType.toLowerCase()}s
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            €{potentialImprovementEuro.toLocaleString()} potential improvement vs similar businesses.
           </p>
         </div>
         <ResponsiveContainer width="100%" height={200}>

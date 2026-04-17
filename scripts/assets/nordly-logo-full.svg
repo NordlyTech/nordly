@@ -1,0 +1,7 @@
+<svg width="680" height="230" viewBox="0 0 680 230" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="680" height="230" fill="none"/>
+  <circle cx="110" cy="115" r="98" fill="#0E8DB8"/>
+  <path d="M74 112C74 85 97 65 145 68C149 117 133 147 106 156C86 162 72 149 74 112Z" stroke="white" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M72 159L127 104" stroke="white" stroke-width="10" stroke-linecap="round"/>
+  <text x="250" y="160" fill="#1F2A37" font-size="118" font-weight="700" font-family="Segoe UI, Arial, sans-serif">Nordly</text>
+</svg>

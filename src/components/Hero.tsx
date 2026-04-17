@@ -1,11 +1,16 @@
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
-import { toast } from 'sonner'
+
+const PRODUCT_APP_URL = 'http://localhost:3000'
 
 export function Hero() {
-  const handleCTA = () => {
-    toast.success('Free ESG report request received! We\'ll be in touch soon.')
+  const handlePrimaryCTA = () => {
+    window.location.href = `${PRODUCT_APP_URL}/register`
+  }
+
+  const handleSecondaryCTA = () => {
+    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   return (
@@ -24,17 +29,15 @@ export function Hero() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/60 text-sm font-medium text-foreground mb-6"
           >
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            AI-Powered Energy Intelligence
+            AI-Powered Energy Savings Platform
           </motion.div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground mb-6 tracking-tight leading-tight">
-            Turn your energy data into{' '}
-            <span className="text-primary">savings</span> and{' '}
-            <span className="text-primary">ESG reports</span> in minutes
+            Turn energy waste into measurable savings
           </h1>
 
-          <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-            Nordly uses AI to analyze your energy consumption, identify cost-saving opportunities, and generate comprehensive ESG reports automatically.
+          <p className="text-xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
+            Nordly helps companies identify hidden energy costs, turn them into actions, and track real savings across all locations - powered by AI.
           </p>
 
           <motion.div
@@ -44,19 +47,20 @@ export function Hero() {
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
             <Button
-              onClick={handleCTA}
+              onClick={handlePrimaryCTA}
               size="lg"
               className="bg-primary hover:bg-accent text-primary-foreground font-medium text-lg px-8 py-6 h-auto rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 group"
             >
-              Get your free ESG report
+              Get your savings estimate
               <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" weight="bold" />
             </Button>
             <Button
+              onClick={handleSecondaryCTA}
               variant="outline"
               size="lg"
               className="font-medium text-lg px-8 py-6 h-auto rounded-xl border-2 hover:border-primary hover:text-primary transition-all"
             >
-              Watch demo
+              See how it works
             </Button>
           </motion.div>
 
@@ -66,7 +70,7 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.5 }}
             className="text-sm text-muted-foreground mt-6"
           >
-            No credit card required · Free forever · Setup in 2 minutes
+            No credit card · 2 min setup · See € savings instantly
           </motion.p>
         </motion.div>
       </div>

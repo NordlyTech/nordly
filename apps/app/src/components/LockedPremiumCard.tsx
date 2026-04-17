@@ -17,36 +17,35 @@ export function LockedPremiumCard() {
         <CardHeader className="relative">
           <CardTitle className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-muted-foreground" weight="duotone" />
-            Premium Feature
+            Unlock additional savings
           </CardTitle>
         </CardHeader>
         <CardContent className="relative">
           <div className="space-y-4">
             <div>
-              <h3 className="font-semibold text-lg mb-2">Detailed Equipment Savings Analysis</h3>
+              <h3 className="font-semibold text-lg mb-2">Go beyond baseline recommendations</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Unlock granular insights into individual equipment efficiency, ROI calculations, 
-                and customized upgrade recommendations.
+                Premium gives your team richer optimization playbooks and deeper cost opportunities.
               </p>
             </div>
             
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Sparkle className="w-4 h-4 text-accent" weight="fill" />
-                Equipment-level energy breakdown
+                Equipment-level savings analysis
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Sparkle className="w-4 h-4 text-accent" weight="fill" />
-                Custom maintenance schedules
+                Automated mission workflows
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Sparkle className="w-4 h-4 text-accent" weight="fill" />
-                Replacement ROI calculator
+                Portfolio-level benchmark intelligence
               </div>
             </div>
             
             <Button className="w-full mt-4" size="lg">
-              Unlock Premium
+              Upgrade
             </Button>
           </div>
         </CardContent>
