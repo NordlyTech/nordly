@@ -39,14 +39,6 @@ export function Header() {
             >
               Pricing
             </Link>
-            <Link 
-              to="/presentation" 
-              className={`text-sm font-medium transition-colors ${
-                isActive('/presentation') ? 'text-primary' : 'text-muted-foreground hover:text-primary'
-              }`}
-            >
-              Presentation
-            </Link>
           </nav>
 
           <div className="flex items-center gap-3">
