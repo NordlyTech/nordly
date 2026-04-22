@@ -19,6 +19,7 @@ import {
 import { generateReportAction } from "@/lib/actions/generateReport"
 import { getReportGenerationFormContext } from "@/lib/data/reports.actions"
 import { getLocationTypeLabel } from "@/lib/reports/shared"
+import { PremiumUnlockModal } from "@/components/premium/PremiumUnlockModal"
 import type { ReportGenerationFormContext } from "@/types/report"
 
 const PROGRESS_MESSAGES = [
@@ -46,6 +47,7 @@ export function NewReportPage() {
   const [generating, setGenerating] = useState(false)
   const [progressIndex, setProgressIndex] = useState(0)
   const [toast, setToast] = useState<ToastState | null>(null)
+  const [premiumModalOpen, setPremiumModalOpen] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -131,7 +133,7 @@ export function NewReportPage() {
       <div className="container mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <Card className="rounded-2xl border border-rose-200 bg-rose-50/70 py-8">
           <CardContent className="text-center">
-            <p className="text-lg font-semibold text-rose-900">Could not open the report builder</p>
+            <p className="text-xl font-semibold text-rose-900">Could not open the report builder</p>
             <p className="mt-2 text-sm text-rose-700">{pageError}</p>
           </CardContent>
         </Card>
@@ -230,7 +232,7 @@ export function NewReportPage() {
 
       <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Generate Report</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Generate Report</h1>
           <p className="mt-2 text-muted-foreground">
             Build a calm, executive-ready savings report from location context, operating notes, and conservative AI estimates.
           </p>
@@ -372,13 +374,21 @@ export function NewReportPage() {
                 <p>More specific retrofit opportunities</p>
                 <p>Higher-confidence savings ranges where data supports it</p>
               </div>
-              <Button variant="outline" className="mt-5 w-full" disabled={!context.isPremium}>
-                {context.isPremium ? "Equipment support ready" : "Upgrade to Premium"}
-              </Button>
+              {context.isPremium ? (
+                <Button variant="outline" className="mt-5 w-full" disabled>
+                  Equipment support ready
+                </Button>
+              ) : (
+                <Button variant="outline" className="mt-5 w-full" onClick={() => setPremiumModalOpen(true)}>
+                  Upgrade to Premium
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <PremiumUnlockModal open={premiumModalOpen} onOpenChange={setPremiumModalOpen} context="insight" />
     </div>
   )
 }

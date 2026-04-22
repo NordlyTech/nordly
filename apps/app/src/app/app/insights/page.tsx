@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
@@ -8,6 +9,7 @@ import {
   Circle,
   FadersHorizontal,
   Lightbulb,
+  Lock,
   MapPin,
   RocketLaunch,
   Sparkle,
@@ -33,14 +35,19 @@ import {
 } from "@/components/ui/select"
 import {
   dismissInsight,
+  getCurrentCompanySubscriptionTier,
   getInsights,
+  type CompanySubscriptionTier,
   type InsightRecord,
   type InsightStatus,
 } from "@/lib/data/insights-missions.actions"
 import { acceptInsightAction } from "@/lib/actions/acceptInsight"
 import { generateInsightsAction } from "@/lib/actions/generateInsights"
+import { formatCurrency } from "@/lib/format/currency"
 import { getCompanyLocations } from "@/lib/data/locations.actions"
 import { type CompanyLocationRecord } from "@/lib/data/locations.shared"
+import { PremiumUnlockModal } from "@/components/premium/PremiumUnlockModal"
+import { UPGRADE_ROUTE } from "@/lib/routes"
 
 type InsightTab = "all" | "new" | "accepted" | "dismissed" | "archived"
 type SortKey = "confidence_desc" | "savings_desc" | "new_first"
@@ -59,18 +66,18 @@ type ToastState = {
   message: string
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(value)
+function getConfidenceLabel(score: number) {
+  if (score > 0.75) return "High"
+  if (score >= 0.5) return "Medium"
+  return "Low"
 }
 
-function getConfidenceLabel(score: number) {
-  if (score >= 0.9) return "High"
-  if (score >= 0.75) return "Medium"
-  return "Low"
+function getEstimationBasisPreview(items: string[]) {
+  if (items.length > 0) {
+    return items
+  }
+
+  return ["Estimated based on available location context and common optimization patterns."]
 }
 
 function renderMarkdownPreview(text: string) {
@@ -112,6 +119,11 @@ export default function InsightsPage() {
   const [locations, setLocations] = useState<CompanyLocationRecord[]>([])
   const [selectedLocationId, setSelectedLocationId] = useState<string>("")
   const [generating, setGenerating] = useState(false)
+  const [premiumModalOpen, setPremiumModalOpen] = useState(false)
+  const [premiumModalSavings, setPremiumModalSavings] = useState<number | null>(null)
+  const [subscriptionTier, setSubscriptionTier] = useState<CompanySubscriptionTier>("unknown")
+
+  const isPremiumUser = subscriptionTier === "premium" || subscriptionTier === "enterprise"
 
   const loadInsights = async () => {
     setLoading(true)
@@ -130,6 +142,10 @@ export default function InsightsPage() {
 
   useEffect(() => {
     void loadInsights()
+    getCurrentCompanySubscriptionTier()
+      .then((tier) => setSubscriptionTier(tier))
+      .catch(() => setSubscriptionTier("free"))
+
     // Load locations for the picker (non-blocking)
     getCompanyLocations()
       .then((rows) => {
@@ -199,6 +215,44 @@ export default function InsightsPage() {
     return result
   }, [insights, activeTab, sortBy, categoryFilter])
 
+  const unlockedCount = useMemo(() => {
+    if (isPremiumUser) {
+      return visibleInsights.length
+    }
+
+    if (visibleInsights.length <= 3) {
+      return visibleInsights.length
+    }
+
+    return 3
+  }, [isPremiumUser, visibleInsights.length])
+
+  const lockedInsights = useMemo(() => {
+    if (isPremiumUser || visibleInsights.length <= 3) {
+      return [] as InsightRecord[]
+    }
+
+    return visibleInsights.slice(unlockedCount)
+  }, [isPremiumUser, unlockedCount, visibleInsights])
+
+  const totalLockedSavings = useMemo(() => {
+    return lockedInsights.reduce((sum, item) => {
+      const value = item.estimated_savings_value
+      if (typeof value !== "number" || !Number.isFinite(value)) {
+        return sum
+      }
+
+      return sum + value
+    }, 0)
+  }, [lockedInsights])
+
+  const openPremiumModal = (savingsValue?: number | null) => {
+    setPremiumModalSavings(
+      typeof savingsValue === "number" && Number.isFinite(savingsValue) ? savingsValue : null
+    )
+    setPremiumModalOpen(true)
+  }
+
   useEffect(() => {
     if (loading || !requestedInsightId) {
       return
@@ -222,6 +276,14 @@ export default function InsightsPage() {
       return
     }
 
+    const targetIndex = visibleInsights.findIndex((item) => item.id === requestedInsightId)
+    const targetIsLocked = !isPremiumUser && visibleInsights.length > 3 && targetIndex >= unlockedCount
+
+    if (targetIsLocked) {
+      openPremiumModal(target.estimated_savings_value)
+      return
+    }
+
     setActiveTab("all")
     setCategoryFilter("all")
     setSelectedInsight(target)
@@ -232,7 +294,7 @@ export default function InsightsPage() {
         block: "center",
       })
     })
-  }, [insights, loading, requestedInsightId])
+  }, [insights, loading, requestedInsightId, visibleInsights, isPremiumUser, unlockedCount])
 
   const handleAccept = async (insightId: string) => {
     setBusyInsightId(insightId)
@@ -249,12 +311,12 @@ export default function InsightsPage() {
       if (result.alreadyExisted) {
         setToast({
           type: "info",
-          message: "Mission already exists for this insight.",
+          message: "Project already exists for this insight.",
         })
       } else {
         setToast({
           type: "success",
-          message: "Mission created successfully.",
+          message: "Project created successfully.",
         })
       }
       setSelectedInsight(null)
@@ -283,7 +345,7 @@ export default function InsightsPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8">
+    <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {toast ? (
         <div className="fixed top-4 right-4 z-50">
           <div
@@ -300,12 +362,7 @@ export default function InsightsPage() {
         </div>
       ) : null}
 
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Insights</h1>
-          <p className="mt-2 text-muted-foreground">AI-generated opportunities for your locations</p>
-        </div>
-
+      <div className="mb-6 flex flex-wrap items-start justify-end gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
@@ -403,6 +460,22 @@ export default function InsightsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {!isPremiumUser && lockedInsights.length > 0 ? (
+        <Card className="mb-6 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 to-accent/10 py-4 shadow-sm">
+          <CardContent className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <p className="text-sm text-muted-foreground">Premium opportunity</p>
+              <p className="text-lg font-semibold text-foreground">
+                You are missing {formatCurrency(totalLockedSavings)} in potential savings
+              </p>
+            </div>
+            <Button asChild>
+              <Link href={UPGRADE_ROUTE}>Unlock all with Premium</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -509,7 +582,18 @@ export default function InsightsPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {visibleInsights.map((insight, index) => (
+          {visibleInsights.map((insight, index) => {
+            const locked = !isPremiumUser && visibleInsights.length > 3 && index >= unlockedCount
+            const savingsText = formatCurrency(insight.estimated_savings_value)
+            const basisItems = getEstimationBasisPreview(insight.estimation_basis)
+            const visibleBasis = locked ? basisItems.slice(0, 1) : basisItems
+            const hiddenBasis = locked ? basisItems.slice(1) : []
+            const smallSavings =
+              typeof insight.estimated_savings_value === "number" &&
+              Number.isFinite(insight.estimated_savings_value) &&
+              insight.estimated_savings_value < 10
+
+            return (
             <div key={insight.id} className="space-y-4">
               <Card
                 id={`insight-card-${insight.id}`}
@@ -517,13 +601,33 @@ export default function InsightsPage() {
                   requestedInsightId === insight.id
                     ? "border-primary/50 ring-2 ring-primary/20 shadow-md"
                     : "border-border/80"
-                }`}
+                } ${locked ? "relative cursor-pointer overflow-hidden" : ""}`}
+                role={locked ? "button" : undefined}
+                tabIndex={locked ? 0 : undefined}
+                onClick={locked ? () => openPremiumModal(insight.estimated_savings_value) : undefined}
+                onKeyDown={
+                  locked
+                    ? (event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault()
+                          openPremiumModal(insight.estimated_savings_value)
+                        }
+                      }
+                    : undefined
+                }
               >
-                <CardContent>
+                <CardContent className={locked ? "relative" : undefined}>
                   <div className="mb-4 flex flex-wrap items-center gap-2">
                     <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary">
                       {insight.category}
                     </Badge>
+
+                    {locked ? (
+                      <Badge className="gap-1 bg-slate-900 text-white">
+                        <Lock className="h-3 w-3" weight="fill" />
+                        Premium
+                      </Badge>
+                    ) : null}
 
                     {insight.status === "accepted" ? (
                       <Badge className="gap-1 bg-emerald-600 text-white">
@@ -550,13 +654,27 @@ export default function InsightsPage() {
                   <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
                     <div>
                       <h2 className="text-xl font-semibold text-foreground">{insight.title}</h2>
-                      <p className="mt-2 text-sm font-medium text-foreground/90">{insight.summary}</p>
-                      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{insight.description_md}</p>
+
+                      <p
+                        className={`mt-2 font-bold text-primary ${smallSavings ? "text-2xl" : "text-3xl"}`}
+                      >
+                        {savingsText}
+                      </p>
+                      <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">AI estimate</p>
+
+                      {locked ? (
+                        <p className="mt-1 text-sm text-foreground/80">You could save {savingsText}</p>
+                      ) : null}
+
+                      <p className="mt-2 text-sm font-medium text-foreground/90 line-clamp-2">
+                        {insight.summary}
+                      </p>
+
+                      <p className={`mt-2 text-sm text-muted-foreground ${locked ? "line-clamp-1 opacity-70 blur-[1px]" : "line-clamp-2"}`}>
+                        {insight.description_md}
+                      </p>
 
                       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                        <span className="rounded-md bg-muted px-2 py-1 font-medium text-foreground">
-                          {formatCurrency(insight.estimated_savings_value)} / month
-                        </span>
                         {typeof insight.estimated_savings_percent === "number" ? (
                           <span className="rounded-md bg-emerald-50 px-2 py-1 font-medium text-emerald-700">
                             {insight.estimated_savings_percent}% estimated reduction
@@ -569,20 +687,45 @@ export default function InsightsPage() {
                           </span>
                         ) : null}
                       </div>
+
+                      <div className="mt-4 rounded-lg border border-border/80 bg-slate-50 px-3 py-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Why this estimate</p>
+                        <ul className="mt-2 space-y-1.5 text-sm text-foreground/90">
+                          {visibleBasis.map((item, itemIndex) => (
+                            <li key={`${insight.id}-basis-${itemIndex}`} className="flex items-start gap-2">
+                              <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+
+                        {locked && hiddenBasis.length > 0 ? (
+                          <div className="mt-2 rounded-md bg-white/80 px-2 py-2">
+                            <p className="blur-[2px] text-sm text-foreground/70">{hiddenBasis.join(" • ")}</p>
+                            <p className="mt-1 text-xs font-medium text-primary">Unlock full reasoning with Premium</p>
+                          </div>
+                        ) : null}
+
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {getConfidenceLabel(insight.confidence_score)} confidence ({Math.round(insight.confidence_score * 100)}%)
+                        </p>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 lg:w-[320px] lg:justify-end">
-                      {insight.status === "accepted" ? (
+                      {locked ? (
+                        <p className="w-full text-sm text-muted-foreground lg:text-right">Premium preview</p>
+                      ) : insight.status === "accepted" ? (
                         <>
                           <Badge className="w-full justify-center bg-emerald-600 py-1.5 text-white lg:w-auto">
-                            Accepted as mission
+                            Accepted as project
                           </Badge>
                           <Button
                             className="w-full gap-2 lg:w-auto"
                             onClick={() => router.push(`/app/missions?sourceInsightId=${encodeURIComponent(insight.id)}`)}
                           >
                             <RocketLaunch className="h-4 w-4" weight="duotone" />
-                            View Mission
+                            View Project
                           </Button>
                         </>
                       ) : (
@@ -592,7 +735,7 @@ export default function InsightsPage() {
                             onClick={() => void handleAccept(insight.id)}
                             disabled={busyInsightId === insight.id}
                           >
-                            Accept as Mission
+                            Accept as Project
                           </Button>
                           <Button
                             variant="outline"
@@ -608,24 +751,43 @@ export default function InsightsPage() {
                       <Button
                         variant="ghost"
                         className="w-full text-primary lg:w-auto"
-                        onClick={() => setSelectedInsight(insight)}
+                        onClick={() => {
+                          if (locked) {
+                            openPremiumModal(insight.estimated_savings_value)
+                            return
+                          }
+
+                          setSelectedInsight(insight)
+                        }}
                       >
-                        View details
+                        {locked ? "See Premium details" : "View details"}
                       </Button>
                     </div>
                   </div>
+
+                  {locked ? (
+                    <>
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 rounded-b-2xl bg-gradient-to-t from-white via-white/90 to-transparent" />
+                      <div className="absolute left-4 bottom-4 z-10">
+                        <Button size="sm" onClick={() => openPremiumModal(insight.estimated_savings_value)}>
+                          Unlock with Premium
+                        </Button>
+                      </div>
+                    </>
+                  ) : null}
                 </CardContent>
               </Card>
-
-              {index % 2 === 0 ? (
-                <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground/90">
-                  Add equipment to unlock deeper recommendations and more accurate savings estimates.
-                </div>
-              ) : null}
             </div>
-          ))}
+          )})}
         </div>
       )}
+
+      <PremiumUnlockModal
+        open={premiumModalOpen}
+        onOpenChange={setPremiumModalOpen}
+        context="insight"
+        savingsValue={premiumModalSavings}
+      />
 
       <Dialog open={Boolean(selectedInsight)} onOpenChange={(open) => !open && setSelectedInsight(null)}>
         <DialogContent className="top-0 right-0 left-auto h-screen w-full max-w-[560px] translate-x-0 translate-y-0 rounded-none border-l border-border p-0 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right">
@@ -648,13 +810,14 @@ export default function InsightsPage() {
                   <div className="rounded-lg border border-border bg-muted/30 p-3">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Estimated savings</p>
                     <p className="mt-1 text-lg font-semibold text-foreground">
-                      {formatCurrency(selectedInsight.estimated_savings_value)} / month
+                      {formatCurrency(selectedInsight.estimated_savings_value)}
                     </p>
+                    <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">AI estimate</p>
                   </div>
                   <div className="rounded-lg border border-border bg-muted/30 p-3">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Confidence</p>
                     <p className="mt-1 text-lg font-semibold text-foreground">
-                      {getConfidenceLabel(selectedInsight.confidence_score)} ({Math.round(selectedInsight.confidence_score * 100)}%)
+                      {getConfidenceLabel(selectedInsight.confidence_score)} confidence ({Math.round(selectedInsight.confidence_score * 100)}%)
                     </p>
                   </div>
                   <div className="rounded-lg border border-border bg-muted/30 p-3">
@@ -667,6 +830,18 @@ export default function InsightsPage() {
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Category</p>
                     <p className="mt-1 text-sm font-semibold text-foreground">{selectedInsight.category}</p>
                   </div>
+                </section>
+
+                <section className="rounded-xl border border-border/80 bg-slate-50 p-4">
+                  <h3 className="text-sm font-semibold text-foreground">Why this estimate</h3>
+                  <ul className="mt-3 space-y-2 text-sm text-foreground/90">
+                    {getEstimationBasisPreview(selectedInsight.estimation_basis).map((item, index) => (
+                      <li key={`detail-basis-${index}`} className="flex items-start gap-2">
+                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </section>
 
                 <section className="rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -698,7 +873,7 @@ export default function InsightsPage() {
                       disabled={busyInsightId === selectedInsight.id}
                       onClick={() => void handleAccept(selectedInsight.id)}
                     >
-                      {busyInsightId === selectedInsight.id ? "Accepting..." : "Accept as Mission"}
+                      {busyInsightId === selectedInsight.id ? "Accepting..." : "Accept as Project"}
                     </Button>
                     <Button
                       variant="outline"

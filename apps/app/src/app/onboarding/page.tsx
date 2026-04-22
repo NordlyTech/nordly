@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation"
 
 import { OnboardingWizard } from "@/components/OnboardingWizard"
+import { isCurrentUserAdmin } from "@/lib/auth/admin"
 import { createClient } from "@/lib/supabase/server"
+import { getOnboardingStatus } from "@/lib/auth/onboarding"
 
 type OnboardingPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
@@ -9,9 +11,6 @@ type OnboardingPageProps = {
 
 export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
   const supabase = await createClient()
-
-  const params = (await searchParams) ?? {}
-  const registrationSuccess = params.registered === "1"
 
   const {
     data: { user },
@@ -21,17 +20,17 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
     redirect("/login")
   }
 
-  const { data: memberships } = await supabase
-    .from("company_members")
-    .select("id")
-    .eq("user_id", user.id)
-    .limit(1)
+  if (await isCurrentUserAdmin()) {
+    redirect("/admin")
+  }
 
-  const membership = memberships?.[0] ?? null
+  // Check comprehensive onboarding status
+  const status = await getOnboardingStatus()
 
-  if (membership) {
+  // If already complete, redirect to app
+  if (status.isComplete) {
     redirect("/app")
   }
 
-  return <OnboardingWizard showRegistrationSuccess={registrationSuccess} />
+  return <OnboardingWizard />
 }

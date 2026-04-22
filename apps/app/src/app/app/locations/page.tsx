@@ -271,14 +271,7 @@ export default function LocationsPage() {
   }
 
   const renderHeader = () => (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Locations</h1>
-        <p className="mt-2 text-muted-foreground">
-          Manage your sites and discover where the biggest savings opportunities are
-        </p>
-      </div>
-
+    <div className="mb-6 flex flex-wrap items-start justify-end gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <Button variant="outline" className="gap-2" onClick={() => setFilterMode("all")}>
           Filter
@@ -330,7 +323,7 @@ export default function LocationsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto max-w-7xl px-4 py-8">
+      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {renderHeader()}
         <Card className="rounded-2xl border border-border/80 bg-white py-10">
           <CardContent>
@@ -343,7 +336,7 @@ export default function LocationsPage() {
 
   return (
     <>
-      <div className="container mx-auto max-w-7xl px-4 py-8">
+      <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {toast ? (
           <div className="fixed top-4 right-4 z-50">
             <div
@@ -374,7 +367,6 @@ export default function LocationsPage() {
           <div>
             {renderSummary()}
             <div className="rounded-2xl border border-dashed border-border bg-white p-10 text-center shadow-sm">
-              <h1 className="text-3xl font-bold tracking-tight">Locations</h1>
               <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
                 No locations yet. Add your first location to start discovering savings opportunities.
               </p>
@@ -394,7 +386,7 @@ export default function LocationsPage() {
                   Portfolio View
                 </Badge>
                 <Select value={filterMode} onValueChange={(value) => setFilterMode(value as OpportunityFilter)}>
-                  <SelectTrigger className="w-[220px] bg-white">
+                  <SelectTrigger className="w-[180px] bg-white">
                     <SelectValue placeholder="Opportunity filter" />
                   </SelectTrigger>
                   <SelectContent>

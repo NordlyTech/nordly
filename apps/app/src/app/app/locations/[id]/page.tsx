@@ -113,7 +113,7 @@ export default function LocationDetailPage() {
       <div className="container mx-auto max-w-7xl px-4 py-8">
         <Card className="rounded-2xl border border-rose-200 bg-rose-50/70 py-8">
           <CardContent className="text-center">
-            <p className="text-lg font-semibold text-rose-900">Could not load location</p>
+            <p className="text-xl font-semibold text-rose-900">Could not load location</p>
             <p className="mt-2 text-sm text-rose-700">{error}</p>
             <Button className="mt-4" onClick={() => router.push("/app/locations")}>
               Back to locations
@@ -182,7 +182,7 @@ export default function LocationDetailPage() {
               {getOpportunityLabel(location)}
             </Badge>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">{location.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{location.name}</h1>
           <p className="mt-2 text-muted-foreground">
             {location.city || "City not set"}, {location.country || "Country not set"}
           </p>

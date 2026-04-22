@@ -74,7 +74,7 @@ export function ReportsListPage() {
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <Card className="rounded-2xl border border-rose-200 bg-rose-50/70 py-8">
           <CardContent className="text-center">
-            <p className="text-lg font-semibold text-rose-900">Could not load reports</p>
+            <p className="text-xl font-semibold text-rose-900">Could not load reports</p>
             <p className="mt-2 text-sm text-rose-700">{error}</p>
           </CardContent>
         </Card>
@@ -83,15 +83,9 @@ export function ReportsListPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Reports</h1>
-          <p className="mt-2 text-base text-muted-foreground sm:text-lg">
-            Executive AI reports built from tenant-scoped location context and estimated savings opportunities.
-          </p>
-        </div>
-        <Button className="gap-2" size="lg" onClick={() => router.push("/app/reports/new")}>
+    <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
+      <div className="mb-6 flex flex-wrap items-start justify-end gap-4">
+        <Button className="gap-2 px-5" onClick={() => router.push("/app/reports/new")}>
           <Sparkle size={16} weight="fill" />
           Generate Report
         </Button>
@@ -124,7 +118,7 @@ export function ReportsListPage() {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <PresentationChart className="h-8 w-8" weight="duotone" />
             </div>
-            <h2 className="text-2xl font-semibold text-foreground">Generate your first executive report</h2>
+            <h2 className="text-xl font-semibold text-foreground">Generate your first executive report</h2>
             <p className="mt-3 text-muted-foreground">
               Select a location, enrich the operational context, and turn AI recommendations into a business-ready savings report.
             </p>

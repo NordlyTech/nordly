@@ -5,10 +5,11 @@ import { revalidatePath } from "next/cache"
 import {
   updateMissionStatus,
   type MissionStatus,
+  getMissions,
 } from "@/lib/data/insights-missions.actions"
 
 type UpdateMissionStatusActionResult =
-  | { ok: true }
+  | { ok: true; missionStatus: MissionStatus; savingsCreated?: boolean }
   | { ok: false; error: string }
 
 function revalidateMissionStatusPaths() {
@@ -26,8 +27,22 @@ export async function updateMissionStatusAction(
 ): Promise<UpdateMissionStatusActionResult> {
   try {
     await updateMissionStatus(missionId, newStatus)
+    
+    // Fetch the updated mission to get the savings value for toast messaging
+    const missions = await getMissions()
+    const updatedMission = missions.find((m) => m.id === missionId)
+    
+    const savingsCreated = newStatus === "completed" && 
+      updatedMission && 
+      updatedMission.expected_savings_value !== null && 
+      updatedMission.expected_savings_value > 0
+    
     revalidateMissionStatusPaths()
-    return { ok: true }
+    return {
+      ok: true,
+      missionStatus: newStatus,
+      savingsCreated,
+    }
   } catch (error) {
     return {
       ok: false,

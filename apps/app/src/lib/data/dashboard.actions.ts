@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
+import { getSavingsLeaderboard, type SavingsLeaderboardEntry } from "@/lib/api/leaderboard/getSavingsLeaderboard"
 import { LOCATION_TYPE_LABELS, type LocationType } from "@/lib/data/locations.shared"
 
 type RecordValue = Record<string, unknown>
@@ -58,9 +59,11 @@ export type DashboardData = {
     name: string
     industry: string | null
     country: string | null
+    subscriptionTier: string | null
   }
   summary: DashboardSummary
   topLocations: DashboardTopLocation[]
+  savingsLeaderboard: SavingsLeaderboardEntry[]
   recentInsights: DashboardRecentInsight[]
   activeMissions: DashboardActiveMission[]
   isEmpty: boolean
@@ -164,7 +167,7 @@ export async function getDashboardData(requestedCompanyId?: string | null): Prom
   const [companyResult, locationsResult, insightsResult, missionsResult] = await Promise.all([
     supabase
       .from("companies")
-      .select("id, name, industry, country")
+      .select("id, name, industry, country, subscription_tier")
       .eq("id", auth.companyId)
       .single(),
     supabase
@@ -201,6 +204,7 @@ export async function getDashboardData(requestedCompanyId?: string | null): Prom
   const locationRows = (locationsResult.data ?? []) as RecordValue[]
   const insightRows = (insightsResult.data ?? []) as RecordValue[]
   const missionRows = (missionsResult.data ?? []) as RecordValue[]
+  const savingsLeaderboard = await getSavingsLeaderboard(auth.companyId)
 
   const locationMap = new Map<string, { name: string; location_type: LocationType; city: string | null; country: string | null }>()
 
@@ -349,11 +353,13 @@ export async function getDashboardData(requestedCompanyId?: string | null): Prom
       name: asString(company.name) ?? "Your company",
       industry: asString(company.industry),
       country: asString(company.country),
+      subscriptionTier: asString(company.subscription_tier),
     },
     summary,
     topLocations: topLocationSeed
       .sort((first, second) => second.estimatedSavings - first.estimatedSavings)
       .slice(0, 5),
+    savingsLeaderboard,
     recentInsights: recentInsights
       .sort((first, second) => {
         const firstTime = first.created_at ? new Date(first.created_at).getTime() : 0

@@ -18,6 +18,7 @@ import {
 import { motion } from "framer-motion"
 
 import { LockedPremiumCard } from "@/components/LockedPremiumCard"
+import { SavingsLeaderboard } from "@/components/dashboard/SavingsLeaderboard"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -157,7 +158,7 @@ export function Dashboard({ data, errorMessage }: DashboardProps) {
         <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
           <Card className="rounded-2xl border border-rose-200 bg-rose-50/70 py-10 text-center">
             <CardContent className="mx-auto max-w-xl">
-              <h1 className="text-2xl font-semibold text-rose-900">Could not load dashboard</h1>
+              <h2 className="text-xl font-semibold text-rose-900">Could not load dashboard</h2>
               <p className="mt-2 text-rose-700">{errorMessage}</p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <Button asChild>
@@ -178,13 +179,15 @@ export function Dashboard({ data, errorMessage }: DashboardProps) {
     return null
   }
 
+  const isPremium = data.company.subscriptionTier === "premium" || data.company.subscriptionTier === "enterprise"
+
   return (
     <div className="bg-background">
       <div className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
           <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{data.company.name}</h1>
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{data.company.name}</h2>
               <p className="mt-2 text-base text-muted-foreground sm:text-lg">
                 {data.company.industry ?? "Energy savings operations"}
                 {data.company.country ? ` • ${data.company.country}` : ""}
@@ -294,7 +297,7 @@ export function Dashboard({ data, errorMessage }: DashboardProps) {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <Buildings className="h-8 w-8" weight="duotone" />
                 </div>
-                <h2 className="text-2xl font-semibold text-foreground">Start building your savings pipeline</h2>
+                <h2 className="text-xl font-semibold text-foreground">Start building your savings pipeline</h2>
                 <p className="mt-3 text-muted-foreground">
                   Add your first location, then generate AI insights to turn opportunities into missions and tracked savings.
                 </p>
@@ -334,6 +337,8 @@ export function Dashboard({ data, errorMessage }: DashboardProps) {
               </Card>
 
               <div className="space-y-6">
+                <SavingsLeaderboard entries={data.savingsLeaderboard} isPremium={isPremium} />
+
                 <Card className="border border-border bg-white">
                   <CardHeader className="flex flex-row items-center justify-between gap-3">
                     <CardTitle className="flex items-center gap-2">

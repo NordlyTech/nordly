@@ -45,6 +45,8 @@ export type CreateLocationInput = {
   country?: string
   floor_area_sqm?: number | null
   operating_hours_notes?: string
+  monthly_energy_kwh?: number | null
+  monthly_energy_cost?: number | null
 }
 
 export function formatCurrency(value: number) {

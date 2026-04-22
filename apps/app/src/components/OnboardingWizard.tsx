@@ -1,12 +1,14 @@
 "use client"
 
-import { useActionState, useMemo, useState } from 'react'
+import { startTransition, useActionState, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Buildings, MapPin, Lightning, CheckCircle } from '@phosphor-icons/react'
+import { NordlyMark } from '@/components/brand/NordlyMark'
 import { motion } from 'framer-motion'
 import { submitOnboarding } from '@/app/onboarding/actions'
 
@@ -24,6 +26,8 @@ type LocationData = {
   occupancyNotes: string
   operatingHoursNotes: string
   area: string
+  monthlyEnergyKwh: string
+  monthlyEnergyCost: string
 }
 
 const COUNTRIES = [
@@ -46,19 +50,32 @@ const LOCATION_TYPES = [
 
 type OnboardingState = {
   error: string | null
+  success: boolean
 }
 
 const initialOnboardingState: OnboardingState = {
   error: null,
+  success: false,
 }
 
 const STEP_LABELS = ['Company details', 'First location', 'Additional context', 'Review and submit']
 
-type OnboardingWizardProps = {
-  showRegistrationSuccess?: boolean
+function NordlyOnboardingBrand() {
+  return (
+    <div className="inline-flex items-center gap-3 rounded-2xl border border-primary/20 bg-white/90 px-4 py-2 shadow-sm backdrop-blur-sm">
+      <div className="nordly-logo-entrance">
+        <NordlyMark />
+      </div>
+      <div>
+        <p className="text-xl font-bold tracking-tight text-foreground">Nordly</p>
+        <p className="text-xs text-muted-foreground">Onboarding</p>
+      </div>
+    </div>
+  )
 }
 
-export function OnboardingWizard({ showRegistrationSuccess = false }: OnboardingWizardProps) {
+export function OnboardingWizard() {
+  const router = useRouter()
   const [state, formAction, isPending] = useActionState(submitOnboarding, initialOnboardingState)
   const [step, setStep] = useState(1)
   const [company, setCompany] = useState<CompanyData>({ name: '', country: '' })
@@ -71,8 +88,17 @@ export function OnboardingWizard({ showRegistrationSuccess = false }: Onboarding
     occupancyNotes: '',
     operatingHoursNotes: '',
     area: '',
+    monthlyEnergyKwh: '',
+    monthlyEnergyCost: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Navigate to dashboard on successful onboarding
+  useEffect(() => {
+    if (state.success && !isPending) {
+      router.replace('/app')
+    }
+  }, [state.success, isPending, router])
 
   const locationTypeLabel = useMemo(
     () => LOCATION_TYPES.find((entry) => entry.value === location.type)?.label ?? '-',
@@ -147,7 +173,17 @@ export function OnboardingWizard({ showRegistrationSuccess = false }: Onboarding
       formData.set('floor_area_sqm', location.area)
     }
 
-    formAction(formData)
+    if (location.monthlyEnergyKwh) {
+      formData.set('monthly_energy_kwh', location.monthlyEnergyKwh)
+    }
+
+    if (location.monthlyEnergyCost) {
+      formData.set('monthly_energy_cost', location.monthlyEnergyCost)
+    }
+
+    startTransition(() => {
+      formAction(formData)
+    })
   }
 
   const handleBack = () => {
@@ -164,29 +200,49 @@ export function OnboardingWizard({ showRegistrationSuccess = false }: Onboarding
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-secondary/20">
-      <Card className="w-full max-w-2xl p-8 md:p-12 shadow-lg">
-        {showRegistrationSuccess && (
-          <p className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            Account created successfully. Complete onboarding to finish setting up your workspace.
-          </p>
-        )}
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_0%_0%,#d9f0f7_0%,#f4f8fb_45%,#ffffff_100%)] p-4">
+      <div className="pointer-events-none absolute -left-24 top-10 h-56 w-56 rounded-full bg-cyan-300/25 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 bottom-8 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+
+      <Card className="relative z-10 w-full max-w-2xl border border-primary/10 bg-white/95 p-6 shadow-xl backdrop-blur-sm md:p-10">
+        <div className="mb-8 flex flex-col gap-5">
+          <NordlyOnboardingBrand />
+
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
+              Build your first energy workspace
+            </h1>
+            <p className="max-w-xl text-sm text-muted-foreground md:text-base">
+              Complete setup in a few quick steps. We use these details to personalize insights and recommendations.
+            </p>
+          </div>
+        </div>
 
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+          <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {[1, 2, 3, 4].map((s) => (
                 <div key={s} className="flex items-center">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full transition-all font-semibold ${
-                    s < step ? 'bg-primary text-white' : s === step ? 'bg-primary text-white ring-4 ring-primary/30' : 'bg-muted text-muted-foreground'
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-all ${
+                    s < step
+                      ? 'bg-primary text-white'
+                      : s === step
+                        ? 'bg-primary text-white ring-4 ring-primary/20'
+                        : 'bg-muted text-muted-foreground'
                   }`}>
                     {s < step ? <CheckCircle weight="fill" className="w-5 h-5" /> : s}
                   </div>
-                  {s < 4 && <div className={`h-1 w-12 mx-2 transition-all rounded-full ${s < step ? 'bg-primary' : 'bg-muted'}`} />}
+                  {s < 4 && (
+                    <div
+                      className={`mx-2 h-1 w-8 rounded-full transition-all md:w-12 ${s < step ? 'bg-primary' : 'bg-muted'}`}
+                    />
+                  )}
                 </div>
               ))}
             </div>
-            <span className="text-sm text-muted-foreground">Step {step} of 4</span>
+            <span className="rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground md:text-sm">
+              Step {step} of 4
+            </span>
           </div>
 
           <p className="text-sm text-muted-foreground mb-4">{STEP_LABELS[step - 1]}</p>
@@ -248,7 +304,7 @@ export function OnboardingWizard({ showRegistrationSuccess = false }: Onboarding
             </div>
 
             <div className="flex justify-end mt-8">
-              <Button onClick={handleNext} size="lg" className="px-8">
+              <Button onClick={handleNext} size="lg" className="nordly-gradient-button px-8">
                 Next
               </Button>
             </div>
@@ -334,7 +390,7 @@ export function OnboardingWizard({ showRegistrationSuccess = false }: Onboarding
               <Button onClick={handleBack} variant="outline" size="lg">
                 Back
               </Button>
-              <Button onClick={handleNext} size="lg" className="px-8">
+              <Button onClick={handleNext} size="lg" className="nordly-gradient-button px-8">
                 Next
               </Button>
             </div>
@@ -404,13 +460,49 @@ export function OnboardingWizard({ showRegistrationSuccess = false }: Onboarding
                   className="mt-1.5"
                 />
               </div>
+
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="monthly-energy-kwh">Monthly Energy Consumption (kWh)</Label>
+                  <Input
+                    id="monthly-energy-kwh"
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={location.monthlyEnergyKwh}
+                    onChange={(e) => setLocation({ ...location, monthlyEnergyKwh: e.target.value })}
+                    placeholder="Optional"
+                    className="mt-1.5"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Optional. If known, helps Nordly estimate savings more accurately.
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="monthly-energy-cost">Monthly Energy Cost</Label>
+                  <Input
+                    id="monthly-energy-cost"
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={location.monthlyEnergyCost}
+                    onChange={(e) => setLocation({ ...location, monthlyEnergyCost: e.target.value })}
+                    placeholder="Optional"
+                    className="mt-1.5"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Optional. If known, helps Nordly estimate business impact more accurately.
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-between mt-8">
               <Button onClick={handleBack} variant="outline" size="lg">
                 Back
               </Button>
-              <Button onClick={handleNext} size="lg" className="px-8">
+              <Button onClick={handleNext} size="lg" className="nordly-gradient-button px-8">
                 Review
               </Button>
             </div>
@@ -448,6 +540,12 @@ export function OnboardingWizard({ showRegistrationSuccess = false }: Onboarding
                 <p className="text-sm font-medium text-slate-800">{location.name || '-'}</p>
                 <p className="text-sm text-slate-600">Type: {locationTypeLabel}</p>
                 <p className="text-sm text-slate-600">{location.city || '-'}, {location.country || '-'}</p>
+                {location.monthlyEnergyKwh && (
+                  <p className="text-sm text-slate-600">Monthly energy: {location.monthlyEnergyKwh} kWh</p>
+                )}
+                {location.monthlyEnergyCost && (
+                  <p className="text-sm text-slate-600">Monthly energy cost: {location.monthlyEnergyCost}</p>
+                )}
               </div>
             </div>
 
@@ -462,7 +560,12 @@ export function OnboardingWizard({ showRegistrationSuccess = false }: Onboarding
               <Button onClick={handleBack} variant="outline" size="lg" disabled={isPending}>
                 Back
               </Button>
-              <Button onClick={handleComplete} size="lg" className="px-8" disabled={isPending}>
+              <Button
+                onClick={handleComplete}
+                size="lg"
+                className="nordly-gradient-button px-8"
+                disabled={isPending}
+              >
                 {isPending ? 'Creating workspace...' : 'Complete Setup'}
               </Button>
             </div>

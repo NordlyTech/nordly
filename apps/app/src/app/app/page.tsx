@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 
 import { Dashboard } from "@/components/Dashboard"
+import { isCurrentUserAdmin } from "@/lib/auth/admin"
 import { getDashboardData } from "@/lib/data/dashboard.actions"
 import { createClient } from "@/lib/supabase/server"
 
@@ -13,6 +14,10 @@ export default async function AppDashboardPage() {
 
   if (!user) {
     redirect("/login")
+  }
+
+  if (await isCurrentUserAdmin()) {
+    redirect("/admin")
   }
 
   const { data: memberships, error: membershipError } = await supabase

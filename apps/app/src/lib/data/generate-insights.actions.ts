@@ -11,7 +11,8 @@ type RecordValue = Record<string, unknown>
 
 type AuthContext = {
   userId: string
-  companyId: string
+  companyId: string | null
+  isAdmin: boolean
 }
 
 type CompanyContext = {
@@ -33,9 +34,25 @@ type LocationContext = {
   floorAreaSqm: number | null
   occupancyNotes: string | null
   operatingHoursNotes: string | null
+  monthlyEnergyKwh: number | null
+  monthlyEnergyCost: number | null
 }
 
 type NormalizedGeneratedInsight = GeneratedInsight
+
+function toLoggableDbError(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return error ?? null
+  }
+
+  const candidate = error as Record<string, unknown>
+  return {
+    message: typeof candidate.message === "string" ? candidate.message : null,
+    details: typeof candidate.details === "string" ? candidate.details : null,
+    hint: typeof candidate.hint === "string" ? candidate.hint : null,
+    code: typeof candidate.code === "string" ? candidate.code : null,
+  }
+}
 
 export type GenerateInsightsResult = {
   generationId: string
@@ -80,6 +97,21 @@ function normalizeMarkdownText(value: string) {
     .map((line) => line.trimEnd())
     .join("\n")
     .trim()
+}
+
+function normalizeBasisItems(items: string[]) {
+  const normalized = items
+    .map((item) => normalizeInlineText(item))
+    .filter((item) => item.length > 0)
+
+  const deduped: string[] = []
+  for (const item of normalized) {
+    if (!deduped.some((existing) => existing.toLowerCase() === item.toLowerCase())) {
+      deduped.push(item)
+    }
+  }
+
+  return deduped.slice(0, 4)
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -148,6 +180,11 @@ function normalizeInsights(insights: InsightGenerationOutput["insights"], sparse
     const sparseSafePercent = sparseContext ? Math.min(estimatedSavingsPercent, 25) : estimatedSavingsPercent
     const confidenceScore = clamp(roundTo(insight.confidence_score, 2), 0.1, 0.9)
     const sparseSafeConfidence = sparseContext ? Math.min(confidenceScore, 0.55) : confidenceScore
+    const estimationBasis = normalizeBasisItems(insight.estimation_basis)
+
+    if (estimationBasis.length < 2) {
+      throw new Error("AI returned insufficient estimation basis detail.")
+    }
 
     return {
       title: normalizeInlineText(insight.title),
@@ -157,6 +194,7 @@ function normalizeInsights(insights: InsightGenerationOutput["insights"], sparse
       estimated_savings_value: estimatedSavingsValue,
       estimated_savings_percent: sparseSafePercent,
       confidence_score: sparseSafeConfidence,
+      estimation_basis: estimationBasis,
       rationale: normalizeInlineText(insight.rationale),
     }
   })
@@ -239,6 +277,14 @@ async function requireAuthContext(): Promise<AuthContext> {
     throw new Error("You must be logged in to generate insights.")
   }
 
+  const { data: profileData, error: profileError } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .maybeSingle()
+
+  const isAdmin = !profileError && profileData ? profileData.is_admin === true : false
+
   const { data: memberships, error: membershipError } = await supabase
     .from("company_members")
     .select("company_id")
@@ -253,21 +299,29 @@ async function requireAuthContext(): Promise<AuthContext> {
   const companyId = asString(membership?.company_id)
 
   if (!companyId) {
+    if (isAdmin) {
+      return { userId: user.id, companyId: null, isAdmin: true }
+    }
+
     throw new Error("No company membership found for this user.")
   }
 
-  return { userId: user.id, companyId }
+  return { userId: user.id, companyId, isAdmin }
 }
 
 async function loadGenerationContext(auth: AuthContext, locationId: string) {
   const supabase = await createClient()
 
-  const { data: locationData, error: locationError } = await supabase
+  let locationQuery = supabase
     .from("locations")
-    .select("id, company_id, name, location_type, city, country, floor_area_sqm, occupancy_notes, operating_hours_notes")
+    .select("id, company_id, name, location_type, city, country, floor_area_sqm, occupancy_notes, operating_hours_notes, monthly_energy_kwh, monthly_energy_cost")
     .eq("id", locationId)
-    .eq("company_id", auth.companyId)
-    .single()
+
+  if (!auth.isAdmin && auth.companyId) {
+    locationQuery = locationQuery.eq("company_id", auth.companyId)
+  }
+
+  const { data: locationData, error: locationError } = await locationQuery.single()
 
   if (locationError || !locationData) {
     throw new Error("Location not found.")
@@ -285,7 +339,7 @@ async function loadGenerationContext(auth: AuthContext, locationId: string) {
 
   const location: LocationContext = {
     id: asString(locationRow.id) ?? locationId,
-    companyId: asString(locationRow.company_id) ?? auth.companyId,
+    companyId: asString(locationRow.company_id) ?? auth.companyId ?? "",
     name: asString(locationRow.name) ?? "Location",
     locationType,
     locationTypeLabel,
@@ -294,12 +348,14 @@ async function loadGenerationContext(auth: AuthContext, locationId: string) {
     floorAreaSqm: asNumber(locationRow.floor_area_sqm),
     occupancyNotes: asString(locationRow.occupancy_notes),
     operatingHoursNotes: asString(locationRow.operating_hours_notes),
+    monthlyEnergyKwh: asNumber(locationRow.monthly_energy_kwh),
+    monthlyEnergyCost: asNumber(locationRow.monthly_energy_cost),
   }
 
   const { data: companyData, error: companyError } = await supabase
     .from("companies")
     .select("id, name, industry, country, subscription_tier")
-    .eq("id", auth.companyId)
+    .eq("id", location.companyId)
     .single()
 
   if (companyError || !companyData) {
@@ -308,7 +364,7 @@ async function loadGenerationContext(auth: AuthContext, locationId: string) {
 
   const companyRow = companyData as RecordValue
   const company: CompanyContext = {
-    id: asString(companyRow.id) ?? auth.companyId,
+    id: asString(companyRow.id) ?? location.companyId,
     name: asString(companyRow.name) ?? "Your company",
     industry: asString(companyRow.industry),
     country: asString(companyRow.country),
@@ -321,10 +377,13 @@ async function loadGenerationContext(auth: AuthContext, locationId: string) {
 async function insertGenerationLog(args: {
   companyId: string
   userId: string
+  locationId: string
   inputPayload: Record<string, unknown>
   modelName: string
   outputPayload: Record<string, unknown>
   status: "success" | "error"
+  promptSummary?: string
+  insightCount?: number
 }) {
   const supabase = await createClient()
 
@@ -333,10 +392,14 @@ async function insertGenerationLog(args: {
     .insert({
       company_id: args.companyId,
       user_id: args.userId,
+      location_id: args.locationId,
       generation_type: "location_insights",
       input_payload_json: args.inputPayload,
       prompt_version: promptVersion,
       model_name: args.modelName,
+      model: args.modelName,
+      prompt_summary: args.promptSummary ?? null,
+      insight_count: args.insightCount ?? 0,
       output_payload_json: args.outputPayload,
       status: args.status,
     })
@@ -371,8 +434,8 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
     floor_area_sqm: location.floorAreaSqm,
     occupancy_notes: location.occupancyNotes,
     operating_hours_notes: location.operatingHoursNotes,
-    monthly_energy_kwh: null,
-    monthly_energy_cost: null,
+    monthly_energy_kwh: location.monthlyEnergyKwh,
+    monthly_energy_cost: location.monthlyEnergyCost,
     currency: null,
     additional_notes: null,
     equipment_list: [],
@@ -412,8 +475,8 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
             floorAreaSqm: location.floorAreaSqm,
             occupancyNotes: location.occupancyNotes,
             operatingHoursNotes: location.operatingHoursNotes,
-            monthlyEnergyKwh: null,
-            monthlyEnergyCost: null,
+            monthlyEnergyKwh: location.monthlyEnergyKwh,
+            monthlyEnergyCost: location.monthlyEnergyCost,
             currency: null,
             additionalNotes: null,
             equipmentList: [],
@@ -431,8 +494,9 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
 
     currentStage = "persist-generation"
     const generationInsert = await insertGenerationLog({
-      companyId: auth.companyId,
+      companyId: company.id,
       userId: auth.userId,
+      locationId: location.id,
       inputPayload,
       modelName,
       outputPayload: {
@@ -442,28 +506,26 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
         insights,
       },
       status: "success",
+      promptSummary: summary.slice(0, 280),
+      insightCount: insights.length,
     })
 
     if (generationInsert.error || !generationInsert.data) {
       console.error("[ai.generate] Failed to insert ai_generations success row", {
-        companyId: auth.companyId,
+        companyId: company.id,
         userId: auth.userId,
         locationId: location.id,
         stage: currentStage,
-        error: generationInsert.error,
+        error: toLoggableDbError(generationInsert.error),
       })
-      throw new Error("Failed to save generation record.")
-    }
-
-    generationId = asString(generationInsert.data.id)
-    if (!generationId) {
-      throw new Error("Failed to save generation record.")
+    } else {
+      generationId = asString(generationInsert.data.id)
     }
 
     currentStage = "persist-insights"
     const supabase = await createClient()
     const insightRows = insights.map((insight) => ({
-      company_id: auth.companyId,
+      company_id: company.id,
       location_id: location.id,
       source_type: "ai_generated",
       title: insight.title,
@@ -471,6 +533,7 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
       description_md: insight.description_md,
       category: insight.category,
       confidence_score: insight.confidence_score,
+      estimation_basis: insight.estimation_basis,
       estimated_savings_value: insight.estimated_savings_value,
       estimated_savings_percent: insight.estimated_savings_percent,
       status: "new",
@@ -481,25 +544,27 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
 
     if (insightsInsertError) {
       console.error("[ai.generate] Failed to insert insights rows", {
-        companyId: auth.companyId,
+        companyId: company.id,
         userId: auth.userId,
         locationId: location.id,
         generationId,
         insightCount: insightRows.length,
-        error: insightsInsertError,
+        error: toLoggableDbError(insightsInsertError),
       })
 
-      await supabase
-        .from("ai_generations")
-        .update({
-          status: "error",
-          output_payload_json: {
-            error: "Insights insert failed.",
-            stage: currentStage,
-            insight_count: insightRows.length,
-          },
-        })
-        .eq("id", generationId)
+      if (generationId) {
+        await supabase
+          .from("ai_generations")
+          .update({
+            status: "error",
+            output_payload_json: {
+              error: "Insights insert failed.",
+              stage: currentStage,
+              insight_count: insightRows.length,
+            },
+          })
+          .eq("id", generationId)
+      }
 
       throw new Error("Failed to save generated insights.")
     }
@@ -514,7 +579,7 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
     const internalMessage = error instanceof Error ? error.message : "Unknown error"
 
     console.error("[ai.generate] Generation failed", {
-      companyId: auth.companyId,
+      companyId: company.id,
       userId: auth.userId,
       locationId: location.id,
       stage: currentStage,
@@ -525,8 +590,9 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
 
     if (!generationId) {
       const generationInsert = await insertGenerationLog({
-        companyId: auth.companyId,
+        companyId: company.id,
         userId: auth.userId,
+        locationId: location.id,
         inputPayload,
         modelName,
         outputPayload: {
@@ -536,15 +602,16 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
           raw_response_preview: rawContent ? rawContent.slice(0, 1200) : null,
         },
         status: "error",
+        promptSummary: safeMessage.slice(0, 280),
       })
 
       if (generationInsert.error) {
         console.error("[ai.generate] Failed to insert ai_generations error row", {
-          companyId: auth.companyId,
+          companyId: company.id,
           userId: auth.userId,
           locationId: location.id,
           stage: currentStage,
-          error: generationInsert.error,
+          error: toLoggableDbError(generationInsert.error),
         })
       }
     }

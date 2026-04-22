@@ -20,6 +20,7 @@ type LocationType = (typeof LOCATION_TYPES)[number]
 
 type OnboardingState = {
   error: string | null
+  success: boolean
 }
 
 function getRequiredString(formData: FormData, fieldName: string) {
@@ -64,12 +65,13 @@ export async function submitOnboarding(
     !locationCountry ||
     !locationCity
   ) {
-    return { error: "Please fill in all required fields." }
+    return { error: "Please fill in all required fields.", success: false }
   }
 
   if (!LOCATION_TYPES.includes(locationTypeValue as LocationType)) {
     return {
       error: "Invalid location type. Please pick one of the provided options.",
+      success: false,
     }
   }
 
@@ -80,7 +82,7 @@ export async function submitOnboarding(
     .limit(1)
 
   if ((existingMemberships?.length ?? 0) > 0) {
-    redirect("/app")
+    return { error: null, success: true }
   }
 
   const address = getRequiredString(formData, "location_address")
@@ -97,6 +99,7 @@ export async function submitOnboarding(
     if (!Number.isFinite(parsedFloorArea) || parsedFloorArea <= 0) {
       return {
         error: "Area (sqm) must be a positive number when provided.",
+        success: false,
       }
     }
 
@@ -106,7 +109,30 @@ export async function submitOnboarding(
   if (floorAreaRaw && floorArea === null) {
     return {
       error: "Area (sqm) must be a positive number when provided.",
+      success: false,
     }
+  }
+
+  const monthlyEnergyKwhRaw = getRequiredString(formData, "monthly_energy_kwh")
+  let monthlyEnergyKwh: number | null = null
+
+  if (monthlyEnergyKwhRaw) {
+    const parsed = Number(monthlyEnergyKwhRaw)
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return { error: "Monthly energy consumption must be zero or greater when provided.", success: false }
+    }
+    monthlyEnergyKwh = parsed
+  }
+
+  const monthlyEnergyCostRaw = getRequiredString(formData, "monthly_energy_cost")
+  let monthlyEnergyCost: number | null = null
+
+  if (monthlyEnergyCostRaw) {
+    const parsed = Number(monthlyEnergyCostRaw)
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return { error: "Monthly energy cost must be zero or greater when provided.", success: false }
+    }
+    monthlyEnergyCost = parsed
   }
 
   const { error: rpcError } = await supabase.rpc("complete_onboarding", {
@@ -121,6 +147,8 @@ export async function submitOnboarding(
     p_floor_area_sqm: floorArea,
     p_occupancy_notes: occupancyNotes,
     p_operating_hours_notes: operatingHoursNotes,
+    p_monthly_energy_kwh: monthlyEnergyKwh,
+    p_monthly_energy_cost: monthlyEnergyCost,
   })
 
   if (rpcError) {
@@ -131,7 +159,7 @@ export async function submitOnboarding(
     console.error("[onboarding] RPC error:", rpcError.code, msg)
 
     if (msgLower.includes("already onboarded")) {
-      redirect("/app")
+      return { error: null, success: true }
     }
 
     if (
@@ -143,6 +171,7 @@ export async function submitOnboarding(
       return {
         error:
           "Setup function not found — run supabase/migrations/20260412_complete_onboarding.sql in your Supabase SQL Editor first.",
+        success: false,
       }
     }
 
@@ -150,12 +179,13 @@ export async function submitOnboarding(
       return {
         error:
           "Permission error — run supabase/migrations/20260412_complete_onboarding.sql in your Supabase SQL Editor.",
+        success: false,
       }
     }
 
     // Fall through: show actual Postgres/PostgREST message so nothing is silently swallowed
-    return { error: msg || "Setup failed. Please try again." }
+    return { error: msg || "Setup failed. Please try again.", success: false }
   }
 
-  redirect("/app")
+  return { error: null, success: true }
 }

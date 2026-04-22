@@ -9,7 +9,8 @@ export const generatedInsightSchema = z.object({
   category: insightCategorySchema,
   estimated_savings_value: z.number().finite(),
   estimated_savings_percent: z.number().finite(),
-  confidence_score: z.number().finite(),
+  confidence_score: z.number().finite().min(0).max(1),
+  estimation_basis: z.array(z.string().trim().min(1)).min(2).max(4),
   rationale: z.string().trim().min(1),
 })
 

@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import {
+  createMissionCompletionSavingsRecord,
+  deleteMissionCompletionSavingsRecord,
+} from "@/lib/data/savings-records.actions"
 
 export type InsightStatus = "new" | "accepted" | "dismissed" | "archived"
 export type MissionStatus = "open" | "in_progress" | "completed" | "canceled"
@@ -14,6 +18,8 @@ type AuthContext = {
   companyId: string
 }
 
+export type CompanySubscriptionTier = "free" | "premium" | "enterprise" | "unknown"
+
 export type InsightRecord = {
   id: string
   company_id: string
@@ -24,6 +30,7 @@ export type InsightRecord = {
   category: string
   status: InsightStatus
   confidence_score: number
+  estimation_basis: string[]
   estimated_savings_value: number
   estimated_savings_percent: number | null
   location_name: string | null
@@ -145,6 +152,29 @@ async function requireAuthContext(requestedCompanyId?: string | number | null): 
     userId: user.id,
     companyId,
   }
+}
+
+export async function getCurrentCompanySubscriptionTier(): Promise<CompanySubscriptionTier> {
+  const auth = await requireAuthContext()
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from("companies")
+    .select("subscription_tier")
+    .eq("id", auth.companyId)
+    .single()
+
+  if (error) {
+    return "unknown"
+  }
+
+  const tier = asString((data as RecordValue | null)?.subscription_tier)?.toLowerCase()
+
+  if (tier === "premium") return "premium"
+  if (tier === "enterprise") return "enterprise"
+  if (tier === "free") return "free"
+
+  return "free"
 }
 
 function isMissingCompletedAtColumnError(error: { code?: string; message?: string } | null) {
@@ -275,6 +305,7 @@ export async function getInsights(companyId?: string | number | null): Promise<I
       category: asString(row.category) ?? "General",
       status: normalizeInsightStatus(row.status),
       confidence_score: asNumber(row.confidence_score) ?? 0,
+      estimation_basis: asStringArray(row.estimation_basis),
       estimated_savings_value: asNumber(row.estimated_savings_value) ?? 0,
       estimated_savings_percent: asNumber(row.estimated_savings_percent),
       location_name: asString(row.location_name) ?? location?.name ?? null,
@@ -480,7 +511,7 @@ export async function updateMissionStatus(missionId: string, status: MissionStat
 
   const { data: missionData, error: missionError } = await supabase
     .from("missions")
-    .select("id, company_id, location_id, status, expected_savings_value")
+    .select("id, company_id, location_id, status, expected_savings_value, source_insight_id")
     .eq("id", missionId)
     .eq("company_id", auth.companyId)
     .maybeSingle()
@@ -501,6 +532,10 @@ export async function updateMissionStatus(missionId: string, status: MissionStat
     throw new Error("Could not update mission status right now.")
   }
 
+  const locationId = asString(mission.location_id)
+  const expectedSavingsValue = asNumber(mission.expected_savings_value)
+  const sourceInsightId = asString(mission.source_insight_id)
+
   const basePayload: Record<string, unknown> = { status }
 
   if (status === "completed") {
@@ -516,6 +551,16 @@ export async function updateMissionStatus(missionId: string, status: MissionStat
       .eq("company_id", auth.companyId)
 
     if (!withCompletedAtError) {
+      // Mission updated successfully, now create savings record if applicable
+      if (locationId) {
+        await createMissionCompletionSavingsRecord(
+          auth.companyId,
+          locationId,
+          missionId,
+          sourceInsightId,
+          expectedSavingsValue
+        )
+      }
       return
     }
 
@@ -537,6 +582,8 @@ export async function updateMissionStatus(missionId: string, status: MissionStat
       .eq("company_id", auth.companyId)
 
     if (!reopenError) {
+      // Mission reopened successfully, delete auto-generated savings record
+      await deleteMissionCompletionSavingsRecord(auth.companyId, missionId)
       return
     }
 
@@ -553,5 +600,18 @@ export async function updateMissionStatus(missionId: string, status: MissionStat
 
   if (fallbackError) {
     throw new Error("Could not update mission status right now.")
+  }
+
+  // For fallback path (when completed_at column doesn't exist), still handle savings
+  if (status === "completed" && locationId) {
+    await createMissionCompletionSavingsRecord(
+      auth.companyId,
+      locationId,
+      missionId,
+      sourceInsightId,
+      expectedSavingsValue
+    )
+  } else if (status === "open") {
+    await deleteMissionCompletionSavingsRecord(auth.companyId, missionId)
   }
 }

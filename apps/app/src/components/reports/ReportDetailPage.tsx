@@ -15,6 +15,7 @@ import {
   markdownToBlocks,
 } from "@/lib/reports/shared"
 import { formatCurrency, formatNumber } from "@/lib/data/locations.shared"
+import { PremiumUnlockModal } from "@/components/premium/PremiumUnlockModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -56,6 +57,57 @@ export function ReportDetailPage({ reportId }: { reportId: string }) {
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastState | null>(null)
   const [busyInsightId, setBusyInsightId] = useState<string | null>(null)
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [premiumModalOpen, setPremiumModalOpen] = useState(false)
+
+  const handleExportPdf = async () => {
+    if (!report || exportingPdf) {
+      return
+    }
+
+    setExportingPdf(true)
+
+    try {
+      const response = await fetch(`/api/reports/${report.id}/pdf`, { method: "GET" })
+
+      if (!response.ok) {
+        let message = "Could not export PDF right now."
+
+        try {
+          const errorPayload = await response.json()
+          if (typeof errorPayload?.error === "string" && errorPayload.error.length > 0) {
+            message = errorPayload.error
+          }
+        } catch {
+          // Keep the default error message if the response body is not JSON.
+        }
+
+        throw new Error(message)
+      }
+
+      const blob = await response.blob()
+      const fileName = `${(report.title || "nordly-report")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "nordly-report"}.pdf`
+
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = downloadUrl
+      anchor.download = fileName
+      document.body.append(anchor)
+      anchor.click()
+      anchor.remove()
+      window.URL.revokeObjectURL(downloadUrl)
+    } catch (exportError) {
+      setToast({
+        type: "error",
+        message: exportError instanceof Error ? exportError.message : "Could not export PDF right now.",
+      })
+    } finally {
+      setExportingPdf(false)
+    }
+  }
 
   const loadReport = async () => {
     setLoading(true)
@@ -113,7 +165,7 @@ export function ReportDetailPage({ reportId }: { reportId: string }) {
       <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <Card className="rounded-2xl border border-rose-200 bg-rose-50/70 py-8">
           <CardContent className="text-center">
-            <p className="text-lg font-semibold text-rose-900">Could not load report</p>
+            <p className="text-xl font-semibold text-rose-900">Could not load report</p>
             <p className="mt-2 text-sm text-rose-700">{error}</p>
           </CardContent>
         </Card>
@@ -175,16 +227,16 @@ export function ReportDetailPage({ reportId }: { reportId: string }) {
               </Badge>
             ) : null}
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{report.title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{report.title}</h1>
           <p className="mt-2 text-muted-foreground">
             {report.location_name ?? snapshot.location_name} • {formatReportDate(report.created_at)}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <Button variant="outline" className="gap-2" onClick={() => window.location.assign(`/api/reports/${report.id}/pdf`)}>
+          <Button variant="outline" className="gap-2" onClick={() => void handleExportPdf()} disabled={exportingPdf}>
             <DownloadSimple size={16} />
-            Export PDF
+            {exportingPdf ? "Preparing PDF..." : "Export PDF"}
           </Button>
         </div>
       </div>
@@ -412,11 +464,16 @@ export function ReportDetailPage({ reportId }: { reportId: string }) {
                   <p>Unlock more precise recommendations</p>
                   <p>Unlock deeper savings visibility</p>
                 </div>
+                <Button className="mt-5 w-full" onClick={() => setPremiumModalOpen(true)}>
+                  Upgrade to Premium
+                </Button>
               </CardContent>
             </Card>
           ) : null}
         </div>
       </div>
+
+      <PremiumUnlockModal open={premiumModalOpen} onOpenChange={setPremiumModalOpen} context="insight" />
     </div>
   )
 }

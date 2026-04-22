@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { FormEvent, useState } from "react"
 
+import { NordlyMark } from "@/components/brand/NordlyMark"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/client"
@@ -52,13 +53,26 @@ export default function RegisterPage() {
       }
     }
 
-    router.push("/onboarding?registered=1")
+    router.push("/onboarding")
     router.refresh()
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center px-6 py-16">
-      <section className="w-full max-w-md rounded-xl border bg-white p-8 shadow-sm">
+    <main className="relative flex flex-1 items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_0%_0%,#d9f0f7_0%,#f4f8fb_45%,#ffffff_100%)] px-6 py-16">
+      <div className="pointer-events-none absolute -left-20 top-10 h-52 w-52 rounded-full bg-cyan-300/25 blur-3xl" />
+      <div className="pointer-events-none absolute -right-20 bottom-10 h-56 w-56 rounded-full bg-primary/20 blur-3xl" />
+
+      <section className="relative z-10 w-full max-w-md rounded-xl border border-primary/10 bg-white/95 p-8 shadow-xl backdrop-blur-sm">
+        <div className="mb-5 inline-flex items-center gap-3 rounded-2xl border border-primary/20 bg-white/90 px-4 py-2 shadow-sm">
+          <div className="nordly-logo-entrance">
+            <NordlyMark />
+          </div>
+          <div>
+            <p className="text-xl font-bold tracking-tight text-foreground">Nordly</p>
+            <p className="text-xs text-muted-foreground">Create your workspace</p>
+          </div>
+        </div>
+
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Create your account</h1>
         <p className="mt-2 text-sm text-slate-600">Start with a free Nordly workspace.</p>
 
@@ -113,7 +127,7 @@ export default function RegisterPage() {
             </p>
           ) : null}
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="nordly-gradient-button w-full" disabled={isSubmitting}>
             {isSubmitting ? "Creating account..." : "Create account"}
           </Button>
         </form>

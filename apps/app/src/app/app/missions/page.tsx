@@ -165,20 +165,23 @@ function getAllowedTransitions(status: MissionStatus): MissionStatus[] {
   return []
 }
 
-function getMissionStatusToast(status: MissionStatus) {
+function getMissionStatusToast(status: MissionStatus, savingsCreated?: boolean, savingsValue?: number | null) {
   if (status === "in_progress") {
-    return "Mission started"
+    return "Project started"
   }
 
   if (status === "completed") {
-    return "Mission completed"
+    if (savingsCreated && savingsValue !== undefined && savingsValue !== null && savingsValue > 0) {
+      return `Project completed — estimated savings of €${Math.round(savingsValue).toLocaleString()} recorded`
+    }
+    return "Project completed"
   }
 
   if (status === "canceled") {
-    return "Mission canceled"
+    return "Project canceled"
   }
 
-  return "Mission reopened"
+  return "Project reopened"
 }
 
 function formatDeltaPercent(expectedValue: number, actualValue: number | null) {
@@ -268,7 +271,7 @@ function MissionCard({ mission, onViewDetails, onTransition, onOpenMeasuredSavin
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{descriptionPreview}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Expected monthly savings</p>
             <p className="mt-1 text-base font-semibold text-foreground">{formatCurrency(mission.expected_savings_value)}</p>
@@ -281,7 +284,14 @@ function MissionCard({ mission, onViewDetails, onTransition, onOpenMeasuredSavin
 
         {mission.status === "completed" ? (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 text-xs">
-            <p className="font-semibold text-emerald-800">{formatCompletedAgo(mission.completed_at) ?? "Completed"}</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold text-emerald-800">{formatCompletedAgo(mission.completed_at) ?? "Completed"}</p>
+              {mission.expected_savings_value > 0 ? (
+                <Badge variant="outline" className="border-emerald-300 bg-emerald-100 text-emerald-700 text-xs">
+                  Estimated savings recorded
+                </Badge>
+              ) : null}
+            </div>
             <p className="mt-2 text-emerald-700">
               Expected: {formatCurrency(mission.expected_savings_value)} / month
             </p>
@@ -537,7 +547,13 @@ export default function MissionsPage() {
 
       router.refresh()
       await loadMissions()
-      setToast({ type: "success", message: getMissionStatusToast(status) })
+
+      // Get the mission for savings information in toast
+      const mission = missions.find((m) => m.id === missionId)
+      const savingsValue = mission?.expected_savings_value
+      const toastMessage = getMissionStatusToast(status, result.savingsCreated, savingsValue)
+      
+      setToast({ type: "success", message: toastMessage })
     } catch (error) {
       setToast({ type: "error", message: "Could not update mission status right now." })
     } finally {
@@ -598,7 +614,7 @@ export default function MissionsPage() {
   const hasMissions = missions.length > 0
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-8">
+    <div className="container mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {toast ? (
         <div className="fixed top-4 right-4 z-50">
           <div
@@ -613,20 +629,13 @@ export default function MissionsPage() {
         </div>
       ) : null}
 
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Missions</h1>
-          <p className="mt-2 text-muted-foreground">
-            Track accepted actions and move opportunities toward measurable savings
-          </p>
-        </div>
-
+      <div className="mb-6 flex flex-wrap items-start justify-end gap-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Button className="gap-2" onClick={() => router.push("/app/insights")}>
+          <Button className="gap-2 px-5" onClick={() => router.push("/app/insights")}>
             <Sparkle className="h-4 w-4" weight="fill" />
             Generate AI Insights
           </Button>
-          <Button variant="outline" onClick={() => router.push("/app/insights")}>
+          <Button variant="outline" className="gap-2" onClick={() => router.push("/app/insights")}>
             Add Mission
           </Button>
           <Select value={filterBy} onValueChange={(value) => setFilterBy(value as MissionFilter)}>
@@ -715,10 +724,11 @@ export default function MissionsPage() {
           <section className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-foreground">Execution Board</h2>
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-white p-1">
+              <div className="flex w-full items-center gap-2 rounded-xl border border-border bg-white p-1 sm:w-auto">
                 <Button
                   variant={activeView === "board" ? "default" : "ghost"}
                   size="sm"
+                  className="flex-1 sm:flex-none"
                   onClick={() => setActiveView("board")}
                 >
                   <Circle className="h-4 w-4" weight={activeView === "board" ? "fill" : "regular"} />
@@ -727,6 +737,7 @@ export default function MissionsPage() {
                 <Button
                   variant={activeView === "table" ? "default" : "ghost"}
                   size="sm"
+                  className="flex-1 sm:flex-none"
                   onClick={() => setActiveView("table")}
                 >
                   <Table className="h-4 w-4" />
@@ -736,9 +747,9 @@ export default function MissionsPage() {
             </div>
 
             {activeView === "board" ? (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
                 {STATUS_COLUMNS.map((column) => (
-                  <div key={column.key} className="rounded-2xl border border-border/80 bg-slate-50/70 p-3">
+                  <div key={column.key} className="min-w-0 rounded-2xl border border-border/80 bg-slate-50/70 p-3">
                     <div className="mb-3 flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-foreground">{column.label}</h3>
                       <Badge variant="outline" className="bg-white text-muted-foreground">
@@ -773,7 +784,7 @@ export default function MissionsPage() {
                   <table className="min-w-full text-left text-sm">
                     <thead>
                       <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
-                        <th className="px-3 py-3">Mission</th>
+                        <th className="px-3 py-3">Project</th>
                         <th className="px-3 py-3">Status</th>
                         <th className="px-3 py-3">Expected Savings</th>
                         <th className="px-3 py-3">Due Date</th>
@@ -848,7 +859,7 @@ export default function MissionsPage() {
               <DialogHeader>
                 <DialogTitle className="text-xl">{selectedMission.title}</DialogTitle>
                 <DialogDescription>
-                  Mission execution details and value tracking from accepted insights.
+                  Project execution details and value tracking from accepted insights.
                 </DialogDescription>
               </DialogHeader>
 
@@ -932,9 +943,16 @@ export default function MissionsPage() {
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Completed</p>
-                    <p className="mt-2 text-sm font-medium text-foreground">
-                      {formatCompletedAgo(selectedMission.completed_at) ?? "Not completed"}
-                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">
+                        {formatCompletedAgo(selectedMission.completed_at) ?? "Not completed"}
+                      </p>
+                      {selectedMission.status === "completed" && selectedMission.expected_savings_value > 0 ? (
+                        <Badge variant="outline" className="border-emerald-300 bg-emerald-100 text-emerald-700 text-xs">
+                          Savings recorded
+                        </Badge>
+                      ) : null}
+                    </div>
                   </div>
                 </section>
 

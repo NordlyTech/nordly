@@ -1,18 +1,35 @@
 "use client"
 
+import { useState } from "react"
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Lock, Sparkle } from '@phosphor-icons/react'
 import { motion } from 'framer-motion'
+import { PremiumUnlockModal } from "@/components/premium/PremiumUnlockModal"
 
 export function LockedPremiumCard() {
+  const [open, setOpen] = useState(false)
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.4 }}
-    >
-      <Card className="relative overflow-hidden border-2 border-dashed border-primary/30">
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+      >
+      <Card
+        className="relative cursor-pointer overflow-hidden border-2 border-dashed border-primary/30"
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault()
+            setOpen(true)
+          }
+        }}
+      >
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5" />
         <CardHeader className="relative">
           <CardTitle className="flex items-center gap-2">
@@ -36,7 +53,7 @@ export function LockedPremiumCard() {
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Sparkle className="w-4 h-4 text-accent" weight="fill" />
-                Automated mission workflows
+                Automated project workflows
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Sparkle className="w-4 h-4 text-accent" weight="fill" />
@@ -44,12 +61,22 @@ export function LockedPremiumCard() {
               </div>
             </div>
             
-            <Button className="w-full mt-4" size="lg">
+            <Button
+              className="w-full mt-4"
+              size="lg"
+              onClick={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                setOpen(true)
+              }}
+            >
               Upgrade
             </Button>
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+      </motion.div>
+      <PremiumUnlockModal open={open} onOpenChange={setOpen} context="analytics" />
+    </>
   )
 }
