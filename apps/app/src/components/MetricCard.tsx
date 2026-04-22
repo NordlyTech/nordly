@@ -20,11 +20,11 @@ interface MetricCardProps {
 
 export function MetricCard({ label, value, unit, icon, trend, delay = 0, containerBg = '#D9F0F7' }: MetricCardProps & { containerBg?: string }) {
   const [displayValue, setDisplayValue] = useState('0')
+  const numericValue = parseFloat(value.replace(/[^0-9.-]/g, ''))
+  const isNumericValue = !Number.isNaN(numericValue)
   
   useEffect(() => {
-    const numericValue = parseFloat(value.replace(/[^0-9.-]/g, ''))
-    if (isNaN(numericValue)) {
-      setDisplayValue(value)
+    if (!isNumericValue) {
       return
     }
     
@@ -47,7 +47,9 @@ export function MetricCard({ label, value, unit, icon, trend, delay = 0, contain
     }, duration / steps)
     
     return () => clearInterval(timer)
-  }, [value])
+  }, [isNumericValue, numericValue, value])
+
+  const renderedValue = isNumericValue ? displayValue : value
   
   return (
     <motion.div
@@ -77,7 +79,7 @@ export function MetricCard({ label, value, unit, icon, trend, delay = 0, contain
           </div>
           <p className="text-sm font-medium text-muted-foreground mb-2">{label}</p>
           <p className="font-mono text-4xl font-bold tracking-tight">
-            {displayValue}
+            {renderedValue}
             {unit && <span className="text-lg text-muted-foreground ml-1">{unit}</span>}
           </p>
         </CardContent>

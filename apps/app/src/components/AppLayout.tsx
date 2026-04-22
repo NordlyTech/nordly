@@ -72,7 +72,6 @@ const NAV_ITEMS = [
   { label: "Reports", href: "/app/reports", icon: PresentationChart },
   { label: "Insights", href: "/app/insights", icon: Lightbulb },
   { label: "Missions", href: "/app/missions", icon: RocketLaunch },
-  { label: "Settings", href: "/app/settings", icon: Gear },
 ]
 
 function SidebarNav({

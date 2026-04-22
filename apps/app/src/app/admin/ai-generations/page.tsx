@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation"
 
+import {
+  EmptyState,
+  SectionCard,
+  StatusBadge,
+} from "@/components/admin-ui/primitives"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getAdminGenerations, rerunAdminGeneration } from "@/lib/data/admin.actions"
 
 type AiGenerationsPageProps = {
@@ -46,30 +50,22 @@ export default async function AdminAiGenerationsPage({ searchParams }: AiGenerat
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">AI Generations</h1>
-        <p className="mt-1 text-sm text-slate-500">Audit generation payloads and re-run location insight jobs.</p>
-      </div>
-
+    <div className="space-y-5">
       {resolvedSearchParams.notice ? (
-        <Card className="rounded-2xl border-slate-200 bg-slate-50 py-3">
-          <CardContent>
+        <SectionCard title="Notice" description="Latest action result.">
+          <div className="p-4">
             <p className="text-sm text-slate-700">{resolvedSearchParams.notice}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </SectionCard>
       ) : null}
 
-      <Card className="rounded-2xl border-slate-200 py-0">
-        <CardHeader className="border-b border-slate-200 py-4">
-          <CardTitle className="text-base">Generation log</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4">
+      <SectionCard title="Generation log" description="Recent AI generation activity.">
+        <div className="space-y-4 p-4">
           {generations.map((item) => (
-            <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
+            <div key={item.id} className="rounded-xl border border-border/80 bg-white p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{item.id}</p>
+                  <p className="text-sm font-semibold text-foreground">{item.id}</p>
                   <p className="text-xs text-slate-500">
                     {item.generationType ?? "location_insights"} · {item.status ?? "unknown"} · {item.model ?? "-"}
                   </p>
@@ -83,29 +79,38 @@ export default async function AdminAiGenerationsPage({ searchParams }: AiGenerat
                 </form>
               </div>
 
+              <div className="mt-2">
+                <StatusBadge tone={item.status === "failed" || item.status === "error" ? "failed" : item.status === "completed" ? "completed" : "active"}>
+                  {item.status ?? "unknown"}
+                </StatusBadge>
+              </div>
+
               <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <details className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.1em] text-slate-600">
+                <details className="rounded-lg border border-border/80 bg-muted/30 p-3">
+                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                     input_payload_json
                   </summary>
-                  <pre className="mt-2 overflow-x-auto text-xs text-slate-700">{toJson(item.inputPayload)}</pre>
+                  <pre className="mt-2 overflow-x-auto text-xs text-foreground/90">{toJson(item.inputPayload)}</pre>
                 </details>
 
-                <details className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.1em] text-slate-600">
+                <details className="rounded-lg border border-border/80 bg-muted/30 p-3">
+                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                     output_payload_json
                   </summary>
-                  <pre className="mt-2 overflow-x-auto text-xs text-slate-700">{toJson(item.outputPayload)}</pre>
+                  <pre className="mt-2 overflow-x-auto text-xs text-foreground/90">{toJson(item.outputPayload)}</pre>
                 </details>
               </div>
             </div>
           ))}
 
           {generations.length === 0 ? (
-            <p className="text-sm text-slate-500">No generation records found.</p>
+            <EmptyState
+              title="No generation records found"
+              description="Run generation jobs and logs will show up here with payload context."
+            />
           ) : null}
-        </CardContent>
-      </Card>
+        </div>
+      </SectionCard>
     </div>
   )
 }

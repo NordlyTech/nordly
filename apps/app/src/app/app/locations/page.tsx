@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select"
 import { generateInsightsAction } from "@/lib/actions/generateInsights"
 import { createCompanyLocation, getCompanyLocations } from "@/lib/data/locations.actions"
+import { getRegionalBootstrap } from "@/lib/data/regional.actions"
 import {
   formatCurrency,
   formatNumber,
@@ -63,6 +64,7 @@ type AddLocationFormState = {
   location_type: string
   city: string
   country: string
+  country_code: string
   floor_area_sqm: string
   operating_hours_notes: string
 }
@@ -72,6 +74,7 @@ const INITIAL_FORM_STATE: AddLocationFormState = {
   location_type: "",
   city: "",
   country: "",
+  country_code: "",
   floor_area_sqm: "",
   operating_hours_notes: "",
 }
@@ -153,6 +156,9 @@ export default function LocationsPage() {
   const [creatingLocation, setCreatingLocation] = useState(false)
   const [formState, setFormState] = useState<AddLocationFormState>(INITIAL_FORM_STATE)
   const [generatingLocationId, setGeneratingLocationId] = useState<string | null>(null)
+  const [countryOptions, setCountryOptions] = useState<Array<{ code: string; name: string }>>([])
+  const [companyDefaultCountryCode, setCompanyDefaultCountryCode] = useState<string>("")
+  const [companyCurrencyCode, setCompanyCurrencyCode] = useState<string>("EUR")
 
   const loadLocations = async () => {
     setLoading(true)
@@ -171,6 +177,35 @@ export default function LocationsPage() {
 
   useEffect(() => {
     void loadLocations()
+  }, [])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const regional = await getRegionalBootstrap()
+        setCountryOptions(regional.countries.map((c) => ({ code: c.code, name: c.name })))
+        const defaultCountry = regional.settings?.companyCountryCode ?? ""
+        setCompanyDefaultCountryCode(defaultCountry)
+        setCompanyCurrencyCode(regional.settings?.companyCurrencyCode ?? "EUR")
+
+        if (defaultCountry) {
+          const selectedCountry = regional.countries.find((c) => c.code === defaultCountry)
+          setFormState((prev) => {
+            if (prev.country_code) {
+              return prev
+            }
+
+            return {
+              ...prev,
+              country_code: defaultCountry,
+              country: selectedCountry?.name ?? prev.country,
+            }
+          })
+        }
+      } catch {
+        // Non-fatal: forms continue to work with legacy country text only.
+      }
+    })()
   }, [])
 
   useEffect(() => {
@@ -213,7 +248,11 @@ export default function LocationsPage() {
   }, [locations, filterMode, sortMode])
 
   const resetForm = () => {
-    setFormState(INITIAL_FORM_STATE)
+    setFormState({
+      ...INITIAL_FORM_STATE,
+      country_code: companyDefaultCountryCode,
+      country: countryOptions.find((entry) => entry.code === companyDefaultCountryCode)?.name ?? "",
+    })
   }
 
   const handleCreateLocation = async () => {
@@ -249,6 +288,7 @@ export default function LocationsPage() {
       location_type: selectedType as LocationType,
       city: formState.city.trim(),
       country: formState.country.trim(),
+      country_code: formState.country_code.trim() || undefined,
       floor_area_sqm: floorArea,
       operating_hours_notes: formState.operating_hours_notes.trim(),
     }
@@ -303,11 +343,11 @@ export default function LocationsPage() {
         </div>
         <div>
           <p className={metricLabelClass()}>Expected monthly savings</p>
-          <p className="mt-1 text-2xl font-semibold text-foreground">{formatCurrency(summary.totalEstimatedSavings)}</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{formatCurrency(summary.totalEstimatedSavings, companyCurrencyCode)}</p>
         </div>
         <div>
           <p className={metricLabelClass()}>Actual monthly savings</p>
-          <p className="mt-1 text-2xl font-semibold text-foreground">{formatCurrency(summary.totalRealizedSavings)}</p>
+          <p className="mt-1 text-2xl font-semibold text-foreground">{formatCurrency(summary.totalRealizedSavings, companyCurrencyCode)}</p>
         </div>
         <div>
           <p className={metricLabelClass()}>Total insights</p>
@@ -460,11 +500,11 @@ export default function LocationsPage() {
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <p className={metricLabelClass()}>Expected / month</p>
-                            <p className="mt-1 text-base font-semibold text-foreground">{formatCurrency(location.expected_savings_value)}</p>
+                            <p className="mt-1 text-base font-semibold text-foreground">{formatCurrency(location.expected_savings_value, companyCurrencyCode)}</p>
                           </div>
                           <div>
                             <p className={metricLabelClass()}>Actual / month</p>
-                            <p className="mt-1 text-base font-medium text-foreground">{formatCurrency(location.actual_savings_value)}</p>
+                            <p className="mt-1 text-base font-medium text-foreground">{formatCurrency(location.actual_savings_value, companyCurrencyCode)}</p>
                           </div>
                           <div>
                             <p className={metricLabelClass()}>Insights</p>
@@ -554,9 +594,9 @@ export default function LocationsPage() {
                               {location.city || "City not set"}, {location.country || "Country not set"}
                             </td>
                             <td className="px-4 py-3 font-medium text-foreground">
-                              {formatCurrency(location.expected_savings_value)}
+                              {formatCurrency(location.expected_savings_value, companyCurrencyCode)}
                               <span className="block text-xs text-muted-foreground">
-                                Actual: {formatCurrency(location.actual_savings_value)}
+                                Actual: {formatCurrency(location.actual_savings_value, companyCurrencyCode)}
                               </span>
                             </td>
                             <td className="px-4 py-3">{formatNumber(location.insights_count)}</td>
@@ -642,12 +682,28 @@ export default function LocationsPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="location-country">Country</Label>
-                <Input
-                  id="location-country"
-                  placeholder="Germany"
-                  value={formState.country}
-                  onChange={(event) => setFormState((prev) => ({ ...prev, country: event.target.value }))}
-                />
+                <Select
+                  value={formState.country_code}
+                  onValueChange={(value) => {
+                    const selectedCountry = countryOptions.find((entry) => entry.code === value)
+                    setFormState((prev) => ({
+                      ...prev,
+                      country_code: value,
+                      country: selectedCountry?.name ?? prev.country,
+                    }))
+                  }}
+                >
+                  <SelectTrigger id="location-country" className="w-full bg-white">
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countryOptions.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        {country.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

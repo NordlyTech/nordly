@@ -8,36 +8,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { updateCompanyAction } from "@/lib/actions/settings"
 
-const COUNTRIES = [
-  "Norway",
-  "Sweden",
-  "Denmark",
-  "Finland",
-  "United States",
-  "United Kingdom",
-  "Germany",
-  "France",
-  "Spain",
-  "Italy",
-  "Netherlands",
-  "Belgium",
-  "Austria",
-  "Switzerland",
-  "Poland",
-  "Canada",
-  "Australia",
-  "Japan",
-  "Singapore",
-]
-
 type Props = {
   companyId: string
   name: string
   industry: string | null
-  country: string | null
 }
 
-export function SettingsCompanyCard({ companyId, name, industry, country }: Props) {
+export function SettingsCompanyCard({ companyId, name, industry }: Props) {
   const [state, formAction, isPending] = useActionState(updateCompanyAction, null)
 
   return (
@@ -73,23 +50,6 @@ export function SettingsCompanyCard({ companyId, name, industry, country }: Prop
               placeholder="e.g. Retail, hospitality, manufacturing"
               className="h-10 border-border/80 bg-white"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="country">Country</Label>
-            <select
-              id="country"
-              name="country"
-              defaultValue={country ?? ""}
-              className="flex h-10 w-full rounded-lg border border-border/80 bg-white px-3 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <option value="">Select country…</option>
-              {COUNTRIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
           </div>
 
           {state && (

@@ -2,9 +2,24 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 
 import { impersonateUserAction } from "@/app/admin/actions/impersonateUser"
+import {
+  DataCell,
+  DataHeaderCell,
+  DataTable,
+  DataTableBody,
+  DataTableHead,
+  DataTableTable,
+  EmptyState,
+  SectionCard,
+  StatusBadge,
+} from "@/components/admin-ui/primitives"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { getAdminCompanies } from "@/lib/data/admin.actions"
+import {
+  deleteAdminCompany,
+  getAdminCompanies,
+  getAdminCompanyDeleteImpact,
+  updateAdminCompany,
+} from "@/lib/data/admin.actions"
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -14,8 +29,18 @@ function formatCurrency(value: number) {
   }).format(value)
 }
 
-export default async function AdminCompaniesPage() {
+type AdminCompaniesPageProps = {
+  searchParams: Promise<{ notice?: string; edit?: string; delete?: string }>
+}
+
+export default async function AdminCompaniesPage({ searchParams }: AdminCompaniesPageProps) {
+  const resolvedSearchParams = await searchParams
   const companies = await getAdminCompanies()
+  const editingCompany = companies.find((item) => item.id === resolvedSearchParams.edit)
+  const deleteState = resolvedSearchParams.delete ?? ""
+  const deleteImpact = editingCompany && deleteState === "confirm"
+    ? await getAdminCompanyDeleteImpact(editingCompany.id)
+    : null
 
   async function submitImpersonation(formData: FormData) {
     "use server"
@@ -27,49 +52,214 @@ export default async function AdminCompaniesPage() {
     redirect(loginLink)
   }
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Companies</h1>
-        <p className="mt-1 text-sm text-slate-500">Portfolio-level company management and metrics.</p>
-      </div>
+  async function updateAction(formData: FormData) {
+    "use server"
 
-      <Card className="rounded-2xl border-slate-200 py-0">
-        <CardHeader className="border-b border-slate-200 py-4">
-          <CardTitle className="text-base">All companies</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50">
+    const companyId = String(formData.get("companyId") ?? "").trim()
+    const name = String(formData.get("name") ?? "")
+    const country = String(formData.get("country") ?? "")
+    const subscription = String(formData.get("subscription") ?? "free")
+
+    try {
+      await updateAdminCompany({ companyId, name, country, subscription })
+      redirect("/admin/companies?notice=Company+updated")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update company"
+      redirect(`/admin/companies?notice=${encodeURIComponent(message)}&edit=${encodeURIComponent(companyId)}`)
+    }
+  }
+
+  async function deleteAction(formData: FormData) {
+    "use server"
+
+    const companyId = String(formData.get("companyId") ?? "").trim()
+
+    try {
+      await deleteAdminCompany(companyId)
+      redirect("/admin/companies?notice=Company+deleted")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete company"
+      redirect(`/admin/companies?notice=${encodeURIComponent(message)}&edit=${encodeURIComponent(companyId)}&delete=confirm`)
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      {resolvedSearchParams.notice ? (
+        <SectionCard title="Notice" description="Latest company action result.">
+          <div className="p-4">
+            <p className="text-sm text-foreground">{resolvedSearchParams.notice}</p>
+          </div>
+        </SectionCard>
+      ) : null}
+
+      {editingCompany ? (
+        <SectionCard title="Edit company" description="Update basic company profile fields.">
+          <div className="p-4">
+            <form action={updateAction} className="space-y-3">
+              <input type="hidden" name="companyId" value={editingCompany.id} />
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">Name</label>
+                <input
+                  name="name"
+                  defaultValue={editingCompany.name}
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">Country</label>
+                <input
+                  name="country"
+                  defaultValue={editingCompany.country ?? ""}
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">Subscription</label>
+                <select
+                  name="subscription"
+                  defaultValue={editingCompany.subscription ?? "free"}
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm"
+                >
+                  <option value="free">free</option>
+                  <option value="premium">premium</option>
+                  <option value="enterprise">enterprise</option>
+                </select>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="submit" size="sm">Save changes</Button>
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <Link href="/admin/companies">Cancel</Link>
+                </Button>
+                <Button type="button" variant="destructive" size="sm" asChild>
+                  <Link href={`/admin/companies?edit=${editingCompany.id}&delete=confirm`}>Delete company</Link>
+                </Button>
+              </div>
+            </form>
+          </div>
+        </SectionCard>
+      ) : null}
+
+      {deleteImpact ? (
+        <SectionCard
+          title={`Delete ${deleteImpact.companyName}?`}
+          description="This permanently removes the company and dependent records."
+        >
+          <div className="space-y-4 p-4">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              This action cannot be undone. Confirm only after reviewing the cascade totals.
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {deleteImpact.totals.map((item) => (
+                <div key={item.key} className="rounded-xl border border-border/80 bg-white px-4 py-3 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{item.label}</p>
+                  <p className="mt-2 text-2xl font-semibold text-foreground">{item.count}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <form action={deleteAction}>
+                <input type="hidden" name="companyId" value={deleteImpact.companyId} />
+                <Button type="submit" size="sm" variant="destructive">
+                  Confirm delete company
+                </Button>
+              </form>
+              <Button type="button" variant="outline" size="sm" asChild>
+                <Link href={`/admin/companies?edit=${deleteImpact.companyId}`}>Cancel</Link>
+              </Button>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
+
+      <SectionCard title="All companies" description="Company metrics and operational actions.">
+        {companies.length === 0 ? (
+          <div className="p-4">
+            <EmptyState title="No companies found" description="Companies will appear here once onboarding begins." />
+          </div>
+        ) : (
+          <DataTable>
+            <DataTableTable>
+              <DataTableHead>
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Name</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Country</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Locations</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Savings</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Subscription</th>
-                  <th className="px-4 py-3 text-left font-medium text-slate-600">Action</th>
+                  <DataHeaderCell>Name</DataHeaderCell>
+                  <DataHeaderCell>Country</DataHeaderCell>
+                  <DataHeaderCell>Locations</DataHeaderCell>
+                  <DataHeaderCell>Savings</DataHeaderCell>
+                  <DataHeaderCell>Subscription</DataHeaderCell>
+                  <DataHeaderCell>Action</DataHeaderCell>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {companies.map((company) => (
-                  <tr key={company.id}>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      <Link href={`/admin/companies/${company.id}`} className="hover:underline">
+              </DataTableHead>
+              <DataTableBody>
+                {companies.map((company) => {
+                  const isSelected = editingCompany?.id === company.id
+                  const rowClassName = isSelected
+                    ? "bg-primary/10 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.22)] hover:bg-primary/10"
+                    : "hover:bg-slate-100"
+                  const cellClassName = isSelected
+                    ? "bg-primary/10 transition-colors"
+                    : "transition-colors group-hover:bg-slate-100"
+
+                  return (
+                  <tr
+                    key={company.id}
+                    className={`group cursor-pointer ${rowClassName}`}
+                  >
+                    <DataCell className={`font-medium text-foreground ${cellClassName}`}>
+                      <Link
+                        href={`/admin/companies?edit=${company.id}`}
+                        className="-mx-4 -my-3 block px-4 py-3"
+                      >
                         {company.name}
                       </Link>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{company.country ?? "-"}</td>
-                    <td className="px-4 py-3 text-slate-600">{company.locationsCount}</td>
-                    <td className="px-4 py-3 text-slate-600">{formatCurrency(company.totalEstimatedSavings)}</td>
-                    <td className="px-4 py-3 text-slate-600">{company.subscription ?? "free"}</td>
-                    <td className="px-4 py-3 text-slate-600">
+                    </DataCell>
+                    <DataCell className={cellClassName}>
+                      <Link
+                        href={`/admin/companies?edit=${company.id}`}
+                        className="-mx-4 -my-3 block px-4 py-3"
+                      >
+                        {company.country ?? "-"}
+                      </Link>
+                    </DataCell>
+                    <DataCell className={cellClassName}>
+                      <Link
+                        href={`/admin/companies?edit=${company.id}`}
+                        className="-mx-4 -my-3 block px-4 py-3"
+                      >
+                        {company.locationsCount}
+                      </Link>
+                    </DataCell>
+                    <DataCell className={cellClassName}>
+                      <Link
+                        href={`/admin/companies?edit=${company.id}`}
+                        className="-mx-4 -my-3 block px-4 py-3"
+                      >
+                        {formatCurrency(company.totalEstimatedSavings)}
+                      </Link>
+                    </DataCell>
+                    <DataCell className={cellClassName}>
+                      <Link
+                        href={`/admin/companies?edit=${company.id}`}
+                        className="-mx-4 -my-3 flex px-4 py-3"
+                      >
+                        {company.subscription === "premium" || company.subscription === "enterprise" ? (
+                          <StatusBadge tone="premium">{company.subscription}</StatusBadge>
+                        ) : (
+                          <StatusBadge tone="neutral">{company.subscription ?? "free"}</StatusBadge>
+                        )}
+                      </Link>
+                    </DataCell>
+                    <DataCell className={cellClassName}>
                       {company.memberUserIds.length > 0 ? (
                         <form action={submitImpersonation} className="flex items-center gap-2">
                           <select
                             name="target_user_id"
                             defaultValue={company.impersonationUserId ?? company.memberUserIds[0]}
-                            className="h-8 max-w-40 rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-700"
+                            className="h-8 max-w-40 rounded-md border border-border bg-white px-2 text-xs text-foreground"
                           >
                             {company.memberUserIds.map((userId) => (
                               <option key={userId} value={userId}>
@@ -83,23 +273,16 @@ export default async function AdminCompaniesPage() {
                           </Button>
                         </form>
                       ) : (
-                        <span className="text-xs text-slate-400">No members</span>
+                        <span className="text-xs text-muted-foreground">No members</span>
                       )}
-                    </td>
+                    </DataCell>
                   </tr>
-                ))}
-                {companies.length === 0 ? (
-                  <tr>
-                    <td className="px-4 py-6 text-slate-500" colSpan={6}>
-                      No companies found.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                )})}
+              </DataTableBody>
+            </DataTableTable>
+          </DataTable>
+        )}
+      </SectionCard>
     </div>
   )
 }

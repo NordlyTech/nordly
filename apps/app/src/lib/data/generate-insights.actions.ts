@@ -20,6 +20,8 @@ type CompanyContext = {
   name: string
   industry: string | null
   country: string | null
+  countryCode: string | null
+  currencyCode: string | null
   subscriptionTier: string | null
 }
 
@@ -31,6 +33,7 @@ type LocationContext = {
   locationTypeLabel: string
   city: string | null
   country: string | null
+  countryCode: string | null
   floorAreaSqm: number | null
   occupancyNotes: string | null
   operatingHoursNotes: string | null
@@ -55,7 +58,7 @@ function toLoggableDbError(error: unknown) {
 }
 
 export type GenerateInsightsResult = {
-  generationId: string
+  generationId: string | null
   summary: string
   insightsCreated: number
 }
@@ -314,7 +317,7 @@ async function loadGenerationContext(auth: AuthContext, locationId: string) {
 
   let locationQuery = supabase
     .from("locations")
-    .select("id, company_id, name, location_type, city, country, floor_area_sqm, occupancy_notes, operating_hours_notes, monthly_energy_kwh, monthly_energy_cost")
+    .select("id, company_id, name, location_type, city, country, country_code, floor_area_sqm, occupancy_notes, operating_hours_notes, monthly_energy_kwh, monthly_energy_cost")
     .eq("id", locationId)
 
   if (!auth.isAdmin && auth.companyId) {
@@ -345,6 +348,7 @@ async function loadGenerationContext(auth: AuthContext, locationId: string) {
     locationTypeLabel,
     city: asString(locationRow.city),
     country: asString(locationRow.country),
+    countryCode: asString(locationRow.country_code),
     floorAreaSqm: asNumber(locationRow.floor_area_sqm),
     occupancyNotes: asString(locationRow.occupancy_notes),
     operatingHoursNotes: asString(locationRow.operating_hours_notes),
@@ -354,7 +358,7 @@ async function loadGenerationContext(auth: AuthContext, locationId: string) {
 
   const { data: companyData, error: companyError } = await supabase
     .from("companies")
-    .select("id, name, industry, country, subscription_tier")
+    .select("id, name, industry, country, country_code, currency_code, subscription_tier")
     .eq("id", location.companyId)
     .single()
 
@@ -368,6 +372,8 @@ async function loadGenerationContext(auth: AuthContext, locationId: string) {
     name: asString(companyRow.name) ?? "Your company",
     industry: asString(companyRow.industry),
     country: asString(companyRow.country),
+    countryCode: asString(companyRow.country_code),
+    currencyCode: asString(companyRow.currency_code),
     subscriptionTier: asString(companyRow.subscription_tier),
   }
 
@@ -424,6 +430,8 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
     company_name: company.name,
     company_industry: company.industry,
     company_country: company.country,
+    company_country_code: company.countryCode,
+    company_currency_code: company.currencyCode,
     subscription_tier: company.subscriptionTier,
     location_id: location.id,
     location_name: location.name,
@@ -431,12 +439,13 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
     location_type_label: location.locationTypeLabel,
     city: location.city,
     location_country: location.country,
+    location_country_code: location.countryCode,
     floor_area_sqm: location.floorAreaSqm,
     occupancy_notes: location.occupancyNotes,
     operating_hours_notes: location.operatingHoursNotes,
     monthly_energy_kwh: location.monthlyEnergyKwh,
     monthly_energy_cost: location.monthlyEnergyCost,
-    currency: null,
+    currency: company.currencyCode,
     additional_notes: null,
     equipment_list: [],
     sparse_context: sparseContext,
@@ -467,17 +476,20 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
             companyName: company.name,
             companyIndustry: company.industry,
             companyCountry: company.country,
+            companyCountryCode: company.countryCode,
+            companyCurrencyCode: company.currencyCode,
             subscriptionTier: company.subscriptionTier,
             locationName: location.name,
             locationType: location.locationTypeLabel,
             city: location.city,
             locationCountry: location.country,
+            locationCountryCode: location.countryCode,
             floorAreaSqm: location.floorAreaSqm,
             occupancyNotes: location.occupancyNotes,
             operatingHoursNotes: location.operatingHoursNotes,
             monthlyEnergyKwh: location.monthlyEnergyKwh,
             monthlyEnergyCost: location.monthlyEnergyCost,
-            currency: null,
+            currency: company.currencyCode,
             additionalNotes: null,
             equipmentList: [],
           }),

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
+import { getCountryByCode, inferCurrencyFromCountry } from "@/lib/data/regional.actions"
 
 type ActionState = { ok: true; message: string } | { ok: false; error: string }
 
@@ -90,7 +91,6 @@ export async function updateCompanyAction(
   const companyId = getString(formData, "company_id")
   const name = getString(formData, "name")
   const industry = getString(formData, "industry")
-  const country = getString(formData, "country")
 
   if (!companyId) {
     return { ok: false, error: "Company not found." }
@@ -114,7 +114,7 @@ export async function updateCompanyAction(
 
   const { error } = await supabase
     .from("companies")
-    .update({ name, industry: industry || null, country: country || null })
+    .update({ name, industry: industry || null })
     .eq("id", companyId)
 
   if (error) {
@@ -123,6 +123,72 @@ export async function updateCompanyAction(
 
   revalidatePath("/app/settings")
   return { ok: true, message: "Changes saved." }
+}
+
+export async function updateCompanyRegionalAction(
+  _prevState: ActionState | null,
+  formData: FormData
+): Promise<ActionState> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) redirect("/login")
+
+  const companyId = getString(formData, "company_id")
+  const countryCode = getString(formData, "country_code").toUpperCase()
+  const currencyCodeInput = getString(formData, "currency_code").toUpperCase()
+
+  if (!companyId) {
+    return { ok: false, error: "Company not found." }
+  }
+
+  if (!countryCode) {
+    return { ok: false, error: "Company country is required." }
+  }
+
+  // Verify the user is a member of this company before updating
+  const { data: membership } = await supabase
+    .from("company_members")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("user_id", user.id)
+    .limit(1)
+
+  if (!membership || membership.length === 0) {
+    return { ok: false, error: "You do not have permission to update this company." }
+  }
+
+  const country = await getCountryByCode(countryCode)
+  if (!country) {
+    return { ok: false, error: "Selected country is invalid or inactive." }
+  }
+
+  const resolvedCurrencyCode = currencyCodeInput || (await inferCurrencyFromCountry(countryCode))
+  if (!resolvedCurrencyCode) {
+    return { ok: false, error: "Could not infer a valid currency for the selected country." }
+  }
+
+  const { error } = await supabase
+    .from("companies")
+    .update({
+      country: country.name,
+      country_code: country.code,
+      currency_code: resolvedCurrencyCode,
+    })
+    .eq("id", companyId)
+
+  if (error) {
+    return { ok: false, error: error.message }
+  }
+
+  revalidatePath("/app/settings")
+  revalidatePath("/app")
+  revalidatePath("/app/insights")
+  revalidatePath("/app/missions")
+  revalidatePath("/app/locations")
+  return { ok: true, message: "Regional settings saved." }
 }
 
 export async function logoutAction(): Promise<never> {

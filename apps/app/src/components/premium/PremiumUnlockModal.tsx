@@ -22,9 +22,16 @@ type PremiumUnlockModalProps = {
   onOpenChange: (open: boolean) => void
   context: PremiumModalContext
   savingsValue?: number | null
+  currencyCode?: string | null
 }
 
-export function PremiumUnlockModal({ open, onOpenChange, context, savingsValue = null }: PremiumUnlockModalProps) {
+export function PremiumUnlockModal({
+  open,
+  onOpenChange,
+  context,
+  savingsValue = null,
+  currencyCode = "EUR",
+}: PremiumUnlockModalProps) {
   const content = getPremiumModalContent(context)
   const primaryButtonRef = useRef<HTMLButtonElement | null>(null)
 
@@ -50,7 +57,7 @@ export function PremiumUnlockModal({ open, onOpenChange, context, savingsValue =
 
           {typeof savingsValue === "number" && Number.isFinite(savingsValue) ? (
             <div className="rounded-xl border border-primary/25 bg-primary/5 px-4 py-3">
-              <p className="text-sm font-medium text-foreground">Unlock {formatCurrency(savingsValue)} in savings</p>
+              <p className="text-sm font-medium text-foreground">Unlock {formatCurrency(savingsValue, currencyCode)} in savings</p>
             </div>
           ) : null}
 

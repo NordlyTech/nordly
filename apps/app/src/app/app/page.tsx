@@ -36,10 +36,18 @@ export default async function AppDashboardPage() {
     redirect("/onboarding")
   }
 
+  let dashboardData: Awaited<ReturnType<typeof getDashboardData>> | null = null
+
   try {
-    const dashboardData = await getDashboardData(String(membership.company_id))
-    return <Dashboard data={dashboardData} />
+    dashboardData = await getDashboardData(String(membership.company_id))
   } catch {
+    // Keep a user-safe fallback if data loading fails.
+    dashboardData = null
+  }
+
+  if (!dashboardData) {
     return <Dashboard errorMessage="We couldn't load your dashboard right now. Please try again shortly." />
   }
+
+  return <Dashboard data={dashboardData} />
 }

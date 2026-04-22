@@ -12,6 +12,7 @@ import type { SavingsLeaderboardEntry } from "@/lib/api/leaderboard/getSavingsLe
 type SavingsLeaderboardProps = {
   entries: SavingsLeaderboardEntry[]
   isPremium: boolean
+  currencyCode: string
 }
 
 function medalForRank(rank: number) {
@@ -29,7 +30,7 @@ function missionSummary(entry: SavingsLeaderboardEntry) {
   return `${formatNumber(entry.mission_count)} missions`
 }
 
-export function SavingsLeaderboard({ entries, isPremium }: SavingsLeaderboardProps) {
+export function SavingsLeaderboard({ entries, isPremium, currencyCode }: SavingsLeaderboardProps) {
   const [open, setOpen] = useState(false)
 
   if (entries.length === 0) {
@@ -49,6 +50,7 @@ export function SavingsLeaderboard({ entries, isPremium }: SavingsLeaderboardPro
 
   const visibleEntries = isPremium ? entries : entries.slice(0, 3)
   const lockedEntries = isPremium ? [] : entries.slice(3)
+  const lockedSavingsValue = lockedEntries.reduce((total, entry) => total + entry.total_expected_savings, 0)
 
   return (
     <>
@@ -77,7 +79,7 @@ export function SavingsLeaderboard({ entries, isPremium }: SavingsLeaderboardPro
                     <p className="mt-1 text-sm text-muted-foreground">{missionSummary(entry)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-semibold text-primary">{formatCurrency(entry.total_expected_savings)}</p>
+                    <p className="text-lg font-semibold text-primary">{formatCurrency(entry.total_expected_savings, currencyCode)}</p>
                     <p className="text-xs text-muted-foreground">expected savings</p>
                   </div>
                 </div>
@@ -103,7 +105,7 @@ export function SavingsLeaderboard({ entries, isPremium }: SavingsLeaderboardPro
                   <div key={entry.location_id} className="rounded-lg bg-white/80 px-3 py-2 opacity-70 blur-[1px]">
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-medium text-foreground">#{entry.rank} {entry.location_name}</p>
-                      <p className="text-sm font-semibold text-primary">{formatCurrency(entry.total_expected_savings)}</p>
+                      <p className="text-sm font-semibold text-primary">{formatCurrency(entry.total_expected_savings, currencyCode)}</p>
                     </div>
                   </div>
                 ))}
@@ -123,7 +125,13 @@ export function SavingsLeaderboard({ entries, isPremium }: SavingsLeaderboardPro
         </CardContent>
       </Card>
 
-      <PremiumUnlockModal open={open} onOpenChange={setOpen} context="analytics" />
+      <PremiumUnlockModal
+        open={open}
+        onOpenChange={setOpen}
+        context="analytics"
+        savingsValue={lockedSavingsValue > 0 ? lockedSavingsValue : null}
+        currencyCode={currencyCode}
+      />
     </>
   )
 }

@@ -35,6 +35,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { submitMeasuredSavingsAction } from "@/lib/actions/submitMeasuredSavings"
 import { updateMissionStatusAction } from "@/lib/actions/updateMissionStatus"
+import { getCompanyRegionalSettings } from "@/lib/data/regional.actions"
+import { formatMoney } from "@/lib/format/money"
 import {
   getMissions,
   type MissionRecord,
@@ -56,14 +58,6 @@ const STATUS_COLUMNS: Array<{ key: MissionStatus; label: string }> = [
   { key: "completed", label: "Completed" },
   { key: "canceled", label: "Canceled" },
 ]
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(value)
-}
 
 function formatDate(date?: string | null) {
   if (!date) return "No due date"
@@ -165,14 +159,19 @@ function getAllowedTransitions(status: MissionStatus): MissionStatus[] {
   return []
 }
 
-function getMissionStatusToast(status: MissionStatus, savingsCreated?: boolean, savingsValue?: number | null) {
+function getMissionStatusToast(
+  status: MissionStatus,
+  currencyCode: string,
+  savingsCreated?: boolean,
+  savingsValue?: number | null
+) {
   if (status === "in_progress") {
     return "Project started"
   }
 
   if (status === "completed") {
     if (savingsCreated && savingsValue !== undefined && savingsValue !== null && savingsValue > 0) {
-      return `Project completed — estimated savings of €${Math.round(savingsValue).toLocaleString()} recorded`
+      return `Project completed — estimated savings of ${formatMoney(savingsValue, currencyCode, { locale: "en-GB", maximumFractionDigits: 0 })} recorded`
     }
     return "Project completed"
   }
@@ -230,13 +229,14 @@ function SummaryMetric({ label, value }: { label: string; value: string | number
 
 type MissionCardProps = {
   mission: MissionRecord
+  currencyCode: string
   onViewDetails: (missionId: string) => void
   onTransition: (missionId: string, status: MissionStatus) => void
   onOpenMeasuredSavings: (missionId: string) => void
   updating: boolean
 }
 
-function MissionCard({ mission, onViewDetails, onTransition, onOpenMeasuredSavings, updating }: MissionCardProps) {
+function MissionCard({ mission, currencyCode, onViewDetails, onTransition, onOpenMeasuredSavings, updating }: MissionCardProps) {
   const descriptionPreview = shortDescription(mission.description_md)
   const searchParams = useSearchParams()
   const requestedMissionId = searchParams.get("missionId")
@@ -274,7 +274,7 @@ function MissionCard({ mission, onViewDetails, onTransition, onOpenMeasuredSavin
         <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Expected monthly savings</p>
-            <p className="mt-1 text-base font-semibold text-foreground">{formatCurrency(mission.expected_savings_value)}</p>
+            <p className="mt-1 text-base font-semibold text-foreground">{formatMoney(mission.expected_savings_value, currencyCode, { locale: "en-GB", maximumFractionDigits: 0 })}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Due date</p>
@@ -293,10 +293,10 @@ function MissionCard({ mission, onViewDetails, onTransition, onOpenMeasuredSavin
               ) : null}
             </div>
             <p className="mt-2 text-emerald-700">
-              Expected: {formatCurrency(mission.expected_savings_value)} / month
+              Expected: {formatMoney(mission.expected_savings_value, currencyCode, { locale: "en-GB", maximumFractionDigits: 0 })} / month
             </p>
             <p className="mt-1 text-emerald-700">
-              Actual: {mission.actual_savings_value !== null ? `${formatCurrency(mission.actual_savings_value)} / month` : "Not recorded"}
+              Actual: {mission.actual_savings_value !== null ? `${formatMoney(mission.actual_savings_value, currencyCode, { locale: "en-GB", maximumFractionDigits: 0 })} / month` : "Not recorded"}
             </p>
             {mission.actual_savings_value !== null ? (
               <p className={`mt-1 font-semibold ${deltaClass(formatDeltaPercent(mission.expected_savings_value, mission.actual_savings_value))}`}>
@@ -405,6 +405,7 @@ export default function MissionsPage() {
   const [measuredSavingsValue, setMeasuredSavingsValue] = useState("")
   const [measuredSavingsNote, setMeasuredSavingsNote] = useState("")
   const [submittingMeasuredSavings, setSubmittingMeasuredSavings] = useState(false)
+  const [companyCurrencyCode, setCompanyCurrencyCode] = useState<string>("EUR")
 
   const loadMissions = async () => {
     setLoading(true)
@@ -423,6 +424,19 @@ export default function MissionsPage() {
 
   useEffect(() => {
     void loadMissions()
+  }, [])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const settings = await getCompanyRegionalSettings()
+        if (settings?.companyCurrencyCode) {
+          setCompanyCurrencyCode(settings.companyCurrencyCode)
+        }
+      } catch {
+        // Non-fatal; keep default currency fallback.
+      }
+    })()
   }, [])
 
   useEffect(() => {
@@ -551,10 +565,10 @@ export default function MissionsPage() {
       // Get the mission for savings information in toast
       const mission = missions.find((m) => m.id === missionId)
       const savingsValue = mission?.expected_savings_value
-      const toastMessage = getMissionStatusToast(status, result.savingsCreated, savingsValue)
+      const toastMessage = getMissionStatusToast(status, companyCurrencyCode, result.savingsCreated, savingsValue)
       
       setToast({ type: "success", message: toastMessage })
-    } catch (error) {
+    } catch {
       setToast({ type: "error", message: "Could not update mission status right now." })
     } finally {
       setUpdatingMissionId(null)
@@ -672,11 +686,11 @@ export default function MissionsPage() {
           <SummaryMetric label="Completed" value={summary.completedCount} />
           <SummaryMetric
             label="Expected monthly savings"
-            value={formatCurrency(summary.totalExpectedMonthlySavings)}
+            value={formatMoney(summary.totalExpectedMonthlySavings, companyCurrencyCode, { locale: "en-GB", maximumFractionDigits: 0 })}
           />
           <SummaryMetric
             label="Actual monthly savings"
-            value={formatCurrency(summary.totalActualMonthlySavings)}
+            value={formatMoney(summary.totalActualMonthlySavings, companyCurrencyCode, { locale: "en-GB", maximumFractionDigits: 0 })}
           />
         </CardContent>
       </Card>
@@ -767,6 +781,7 @@ export default function MissionsPage() {
                           <MissionCard
                             key={mission.id}
                             mission={mission}
+                            currencyCode={companyCurrencyCode}
                             onViewDetails={setSelectedMissionId}
                             onTransition={(missionId, status) => void persistMissionStatus(missionId, status)}
                             onOpenMeasuredSavings={openMeasuredSavingsDialog}
@@ -815,7 +830,7 @@ export default function MissionsPage() {
                               </Badge>
                             </td>
                             <td className="px-3 py-3 font-semibold text-foreground">
-                              {formatCurrency(mission.expected_savings_value)}
+                              {formatMoney(mission.expected_savings_value, companyCurrencyCode, { locale: "en-GB", maximumFractionDigits: 0 })}
                             </td>
                             <td className="px-3 py-3 text-muted-foreground">{formatDate(mission.due_date)}</td>
                             <td className="px-3 py-3 text-muted-foreground">{mission.owner ?? "Unassigned"}</td>
@@ -903,14 +918,14 @@ export default function MissionsPage() {
                   <div>
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Expected savings</p>
                     <p className="mt-2 text-sm font-semibold text-foreground">
-                      {formatCurrency(selectedMission.expected_savings_value)} / month
+                      {formatMoney(selectedMission.expected_savings_value, companyCurrencyCode, { locale: "en-GB", maximumFractionDigits: 0 })} / month
                     </p>
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Actual savings</p>
                     <p className="mt-2 text-sm font-medium text-muted-foreground">
                       {selectedMission.actual_savings_value
-                        ? `${formatCurrency(selectedMission.actual_savings_value)} / month`
+                        ? `${formatMoney(selectedMission.actual_savings_value, companyCurrencyCode, { locale: "en-GB", maximumFractionDigits: 0 })} / month`
                         : "Pending measurement"}
                     </p>
                     <p className={`mt-1 text-xs font-semibold ${deltaClass(formatDeltaPercent(selectedMission.expected_savings_value, selectedMission.actual_savings_value))}`}>
@@ -1055,7 +1070,7 @@ export default function MissionsPage() {
               <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
                 <p className="font-semibold text-foreground">{measuredSavingsMission.title}</p>
                 <p className="mt-1 text-muted-foreground">
-                  Expected: {formatCurrency(measuredSavingsMission.expected_savings_value)} / month
+                  Expected: {formatMoney(measuredSavingsMission.expected_savings_value, companyCurrencyCode, { locale: "en-GB", maximumFractionDigits: 0 })} / month
                 </p>
               </div>
 

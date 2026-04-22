@@ -46,6 +46,7 @@ import { generateInsightsAction } from "@/lib/actions/generateInsights"
 import { formatCurrency } from "@/lib/format/currency"
 import { getCompanyLocations } from "@/lib/data/locations.actions"
 import { type CompanyLocationRecord } from "@/lib/data/locations.shared"
+import { getCompanyRegionalSettings } from "@/lib/data/regional.actions"
 import { PremiumUnlockModal } from "@/components/premium/PremiumUnlockModal"
 import { UPGRADE_ROUTE } from "@/lib/routes"
 
@@ -122,6 +123,7 @@ export default function InsightsPage() {
   const [premiumModalOpen, setPremiumModalOpen] = useState(false)
   const [premiumModalSavings, setPremiumModalSavings] = useState<number | null>(null)
   const [subscriptionTier, setSubscriptionTier] = useState<CompanySubscriptionTier>("unknown")
+  const [companyCurrencyCode, setCompanyCurrencyCode] = useState<string>("EUR")
 
   const isPremiumUser = subscriptionTier === "premium" || subscriptionTier === "enterprise"
 
@@ -145,6 +147,16 @@ export default function InsightsPage() {
     getCurrentCompanySubscriptionTier()
       .then((tier) => setSubscriptionTier(tier))
       .catch(() => setSubscriptionTier("free"))
+
+    getCompanyRegionalSettings()
+      .then((settings) => {
+        if (settings?.companyCurrencyCode) {
+          setCompanyCurrencyCode(settings.companyCurrencyCode)
+        }
+      })
+      .catch(() => {
+        // non-fatal
+      })
 
     // Load locations for the picker (non-blocking)
     getCompanyLocations()
@@ -321,7 +333,7 @@ export default function InsightsPage() {
       }
       setSelectedInsight(null)
       router.push(`/app/missions?missionId=${encodeURIComponent(result.missionId)}`)
-    } catch (error) {
+    } catch {
       setToast({ type: "error", message: "Could not accept this insight right now." })
     } finally {
       setBusyInsightId(null)
@@ -448,7 +460,7 @@ export default function InsightsPage() {
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Estimated monthly savings</p>
-            <p className="mt-1 text-2xl font-semibold text-foreground">{formatCurrency(summary.totalSavings)}</p>
+            <p className="mt-1 text-2xl font-semibold text-foreground">{formatCurrency(summary.totalSavings, companyCurrencyCode)}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">High-confidence insights</p>
@@ -467,7 +479,7 @@ export default function InsightsPage() {
             <div>
               <p className="text-sm text-muted-foreground">Premium opportunity</p>
               <p className="text-lg font-semibold text-foreground">
-                You are missing {formatCurrency(totalLockedSavings)} in potential savings
+                You are missing {formatCurrency(totalLockedSavings, companyCurrencyCode)} in potential savings
               </p>
             </div>
             <Button asChild>
@@ -584,7 +596,7 @@ export default function InsightsPage() {
         <div className="space-y-4">
           {visibleInsights.map((insight, index) => {
             const locked = !isPremiumUser && visibleInsights.length > 3 && index >= unlockedCount
-            const savingsText = formatCurrency(insight.estimated_savings_value)
+            const savingsText = formatCurrency(insight.estimated_savings_value, companyCurrencyCode)
             const basisItems = getEstimationBasisPreview(insight.estimation_basis)
             const visibleBasis = locked ? basisItems.slice(0, 1) : basisItems
             const hiddenBasis = locked ? basisItems.slice(1) : []
@@ -787,6 +799,7 @@ export default function InsightsPage() {
         onOpenChange={setPremiumModalOpen}
         context="insight"
         savingsValue={premiumModalSavings}
+        currencyCode={companyCurrencyCode}
       />
 
       <Dialog open={Boolean(selectedInsight)} onOpenChange={(open) => !open && setSelectedInsight(null)}>
@@ -810,7 +823,7 @@ export default function InsightsPage() {
                   <div className="rounded-lg border border-border bg-muted/30 p-3">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">Estimated savings</p>
                     <p className="mt-1 text-lg font-semibold text-foreground">
-                      {formatCurrency(selectedInsight.estimated_savings_value)}
+                      {formatCurrency(selectedInsight.estimated_savings_value, companyCurrencyCode)}
                     </p>
                     <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">AI estimate</p>
                   </div>

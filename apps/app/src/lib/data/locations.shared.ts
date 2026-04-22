@@ -1,3 +1,5 @@
+import { formatMoney } from "@/lib/format/money"
+
 export const LOCATION_TYPES = [
   "office",
   "hotel",
@@ -30,6 +32,7 @@ export type CompanyLocationRecord = {
   location_type: LocationType
   city: string | null
   country: string | null
+  country_code: string | null
   floor_area_sqm: number | null
   insights_count: number
   missions_count: number
@@ -43,18 +46,15 @@ export type CreateLocationInput = {
   location_type: LocationType
   city?: string
   country?: string
+  country_code?: string
   floor_area_sqm?: number | null
   operating_hours_notes?: string
   monthly_energy_kwh?: number | null
   monthly_energy_cost?: number | null
 }
 
-export function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(value)
+export function formatCurrency(value: number, currencyCode: string | null = "EUR") {
+  return formatMoney(value, currencyCode, { locale: "en-GB", maximumFractionDigits: 0 })
 }
 
 export function formatNumber(value: number) {

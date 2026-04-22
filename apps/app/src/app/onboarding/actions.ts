@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
+import { inferCurrencyFromCountry } from "@/lib/data/regional.actions"
 
 const LOCATION_TYPES = [
   "office",
@@ -49,20 +50,21 @@ export async function submitOnboarding(
 
   const companyName = getRequiredString(formData, "company_name")
   const companyIndustry = getRequiredString(formData, "company_industry")
-  const companyCountry = getRequiredString(formData, "company_country")
+  const companyCountryCode = getRequiredString(formData, "company_country_code")
+  const companyCurrencyCodeInput = getRequiredString(formData, "company_currency_code")
 
   const locationName = getRequiredString(formData, "location_name")
   const locationTypeValue = getRequiredString(formData, "location_type")
-  const locationCountry = getRequiredString(formData, "location_country")
+  const locationCountryCode = getRequiredString(formData, "location_country_code")
   const locationCity = getRequiredString(formData, "location_city")
 
   if (
     !companyName ||
     !companyIndustry ||
-    !companyCountry ||
+    !companyCountryCode ||
     !locationName ||
     !locationTypeValue ||
-    !locationCountry ||
+    !locationCountryCode ||
     !locationCity
   ) {
     return { error: "Please fill in all required fields.", success: false }
@@ -135,13 +137,24 @@ export async function submitOnboarding(
     monthlyEnergyCost = parsed
   }
 
+  const companyCurrencyCode =
+    companyCurrencyCodeInput ?? (await inferCurrencyFromCountry(companyCountryCode))
+
+  if (!companyCurrencyCode) {
+    return {
+      error: "Could not resolve a valid company currency from the selected country.",
+      success: false,
+    }
+  }
+
   const { error: rpcError } = await supabase.rpc("complete_onboarding", {
     p_company_name: companyName,
     p_company_industry: companyIndustry,
-    p_company_country: companyCountry,
+    p_company_country_code: companyCountryCode,
+    p_company_currency_code: companyCurrencyCode,
     p_location_name: locationName,
     p_location_type: locationTypeValue,
-    p_location_country: locationCountry,
+    p_location_country_code: locationCountryCode,
     p_location_city: locationCity,
     p_location_address: address,
     p_floor_area_sqm: floorArea,
@@ -170,7 +183,7 @@ export async function submitOnboarding(
     ) {
       return {
         error:
-          "Setup function not found — run supabase/migrations/20260412_complete_onboarding.sql in your Supabase SQL Editor first.",
+          "Setup function not found — run supabase/migrations/20260422_regionalization_foundation.sql in your Supabase SQL Editor first.",
         success: false,
       }
     }
@@ -178,7 +191,7 @@ export async function submitOnboarding(
     if (rpcError.code === "42501" || msgLower.includes("permission denied")) {
       return {
         error:
-          "Permission error — run supabase/migrations/20260412_complete_onboarding.sql in your Supabase SQL Editor.",
+          "Permission error — run supabase/migrations/20260422_regionalization_foundation.sql in your Supabase SQL Editor.",
         success: false,
       }
     }

@@ -23,6 +23,7 @@ Important rules:
 - Always present savings as estimated unless the input explicitly includes validated measured results.
 - Do not invent technical facts that were not provided.
 - Do not assume the presence of equipment unless it is explicitly included in the input.
+- Do not invent tariff structures, tariff rates, or utility contract specifics unless user-provided data explicitly includes them.
 - Do not use fake precision.
 - Avoid exaggerated claims.
 - Prefer believable, moderate estimates over aggressive estimates.
@@ -78,7 +79,7 @@ Rules for the JSON:
 - "description_md" should be 2 to 4 short paragraphs or bullet-style lines in markdown, written for a business user.
 - "category" must be one of:
   hvac, lighting, operations, behavior, equipment, schedule
-- "estimated_savings_value" must be a monthly estimated savings value in the company currency if currency is provided, otherwise use a plain number assuming local currency context.
+- "estimated_savings_value" must be a monthly estimated savings value expressed in the company currency whenever company currency is provided.
 - "estimated_savings_percent" must be conservative and plausible.
 - "confidence_score" must always be included and must be between 0.0 and 1.0.
 - "estimation_basis" must always be included with 2 to 4 short bullet-style strings.
@@ -127,11 +128,14 @@ type BuildUserPromptInput = {
   companyName: string
   companyIndustry: string | null
   companyCountry: string | null
+  companyCountryCode: string | null
+  companyCurrencyCode: string | null
   subscriptionTier: string | null
   locationName: string
   locationType: string
   city: string | null
   locationCountry: string | null
+  locationCountryCode: string | null
   floorAreaSqm: number | null
   occupancyNotes: string | null
   operatingHoursNotes: string | null
@@ -165,6 +169,8 @@ Company context:
 - Company name: ${optionalValue(payload.companyName)}
 - Industry: ${optionalValue(payload.companyIndustry)}
 - Country: ${optionalValue(payload.companyCountry)}
+- Country code: ${optionalValue(payload.companyCountryCode)}
+- Company currency code: ${optionalValue(payload.companyCurrencyCode)}
 - Subscription tier: ${optionalValue(payload.subscriptionTier)}
 
 Location context:
@@ -172,6 +178,7 @@ Location context:
 - Location type: ${optionalValue(payload.locationType)}
 - City: ${optionalValue(payload.city)}
 - Country: ${optionalValue(payload.locationCountry)}
+- Country code: ${optionalValue(payload.locationCountryCode)}
 - Floor area sqm: ${optionalValue(payload.floorAreaSqm)}
 - Occupancy notes: ${optionalValue(payload.occupancyNotes)}
 - Operating hours notes: ${optionalValue(payload.operatingHoursNotes)}

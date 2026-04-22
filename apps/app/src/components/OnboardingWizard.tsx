@@ -12,15 +12,27 @@ import { NordlyMark } from '@/components/brand/NordlyMark'
 import { motion } from 'framer-motion'
 import { submitOnboarding } from '@/app/onboarding/actions'
 
+type CountryOption = {
+  code: string
+  name: string
+  currency_code: string
+}
+
+type CurrencyOption = {
+  code: string
+  name: string
+}
+
 type CompanyData = {
   name: string
-  country: string
+  countryCode: string
+  currencyCode: string
 }
 
 type LocationData = {
   name: string
   type: string
-  country: string
+  countryCode: string
   city: string
   address: string
   occupancyNotes: string
@@ -29,12 +41,6 @@ type LocationData = {
   monthlyEnergyKwh: string
   monthlyEnergyCost: string
 }
-
-const COUNTRIES = [
-  'Norway', 'Sweden', 'Denmark', 'Finland', 'United States', 'United Kingdom', 
-  'Germany', 'France', 'Spain', 'Italy', 'Netherlands', 'Belgium', 'Austria',
-  'Switzerland', 'Poland', 'Canada', 'Australia', 'Japan', 'Singapore'
-]
 
 const LOCATION_TYPES = [
   { label: 'Office', value: 'office' },
@@ -74,15 +80,21 @@ function NordlyOnboardingBrand() {
   )
 }
 
-export function OnboardingWizard() {
+export function OnboardingWizard({
+  countries,
+  currencies,
+}: {
+  countries: CountryOption[]
+  currencies: CurrencyOption[]
+}) {
   const router = useRouter()
   const [state, formAction, isPending] = useActionState(submitOnboarding, initialOnboardingState)
   const [step, setStep] = useState(1)
-  const [company, setCompany] = useState<CompanyData>({ name: '', country: '' })
+  const [company, setCompany] = useState<CompanyData>({ name: '', countryCode: '', currencyCode: '' })
   const [location, setLocation] = useState<LocationData>({
     name: '',
     type: '',
-    country: '',
+    countryCode: '',
     city: '',
     address: '',
     occupancyNotes: '',
@@ -105,10 +117,27 @@ export function OnboardingWizard() {
     [location.type]
   )
 
+  const countryMap = useMemo(() => {
+    const map = new Map<string, CountryOption>()
+    for (const country of countries) {
+      map.set(country.code, country)
+    }
+    return map
+  }, [countries])
+
+  const currencyMap = useMemo(() => {
+    const map = new Map<string, CurrencyOption>()
+    for (const currency of currencies) {
+      map.set(currency.code, currency)
+    }
+    return map
+  }, [currencies])
+
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {}
-    if (!company.name.trim()) newErrors.name = 'Company name is required'
-    if (!company.country) newErrors.country = 'Please select a country'
+    if (!company.name.trim()) newErrors.name = 'Company name is required.'
+    if (!company.countryCode) newErrors.country = 'Please select a country'
+    if (!company.currencyCode) newErrors.currency = 'Please select a currency'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -117,7 +146,7 @@ export function OnboardingWizard() {
     const newErrors: Record<string, string> = {}
     if (!location.name.trim()) newErrors.locationName = 'Location name is required'
     if (!location.type) newErrors.locationType = 'Location type is required'
-    if (!location.country) newErrors.locationCountry = 'Please select a country'
+    if (!location.countryCode) newErrors.locationCountry = 'Please select a country'
     if (!location.city.trim()) newErrors.locationCity = 'City is required'
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -130,10 +159,10 @@ export function OnboardingWizard() {
 
   const validateStep4 = () => {
     const newErrors: Record<string, string> = {}
-    if (!company.name.trim() || !company.country) {
+    if (!company.name.trim() || !company.countryCode || !company.currencyCode) {
       newErrors.review = 'Please complete company details.'
     }
-    if (!location.name.trim() || !location.type || !location.country || !location.city.trim()) {
+    if (!location.name.trim() || !location.type || !location.countryCode || !location.city.trim()) {
       newErrors.review = 'Please complete required location details, including location type.'
     }
     setErrors(newErrors)
@@ -159,11 +188,12 @@ export function OnboardingWizard() {
     const formData = new FormData()
     formData.set('company_name', company.name)
     formData.set('company_industry', 'General')
-    formData.set('company_country', company.country)
+    formData.set('company_country_code', company.countryCode)
+    formData.set('company_currency_code', company.currencyCode)
 
     formData.set('location_name', location.name)
     formData.set('location_type', location.type)
-    formData.set('location_country', location.country)
+    formData.set('location_country_code', location.countryCode)
     formData.set('location_city', location.city)
     formData.set('location_address', location.address)
     formData.set('occupancy_notes', location.occupancyNotes)
@@ -289,17 +319,51 @@ export function OnboardingWizard() {
 
               <div>
                 <Label htmlFor="company-country">Country *</Label>
-                <Select value={company.country} onValueChange={(value) => setCompany({ ...company, country: value })}>
+                <Select
+                  value={company.countryCode}
+                  onValueChange={(value) => {
+                    const inferredCurrency = countryMap.get(value)?.currency_code ?? ''
+                    setCompany((prev) => ({
+                      ...prev,
+                      countryCode: value,
+                      currencyCode: inferredCurrency || prev.currencyCode,
+                    }))
+                    setLocation((prev) => ({
+                      ...prev,
+                      countryCode: prev.countryCode || value,
+                    }))
+                  }}
+                >
                   <SelectTrigger id="company-country" className={`mt-1.5 ${errors.country ? 'border-destructive' : ''}`}>
                     <SelectValue placeholder="Select your country" />
                   </SelectTrigger>
                   <SelectContent>
-                    {COUNTRIES.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    {countries.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {errors.country && <p className="text-sm text-destructive mt-1">{errors.country}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="company-currency">Default Currency *</Label>
+                <Select
+                  value={company.currencyCode}
+                  onValueChange={(value) => setCompany((prev) => ({ ...prev, currencyCode: value }))}
+                >
+                  <SelectTrigger id="company-currency" className={`mt-1.5 ${errors.currency ? 'border-destructive' : ''}`}>
+                    <SelectValue placeholder="Select default currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {currencies.map((currency) => (
+                      <SelectItem key={currency.code} value={currency.code}>
+                        {currency.name} ({currency.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.currency && <p className="text-sm text-destructive mt-1">{errors.currency}</p>}
               </div>
             </div>
 
@@ -360,13 +424,13 @@ export function OnboardingWizard() {
 
               <div>
                 <Label htmlFor="location-country">Country *</Label>
-                <Select value={location.country} onValueChange={(value) => setLocation({ ...location, country: value })}>
+                <Select value={location.countryCode} onValueChange={(value) => setLocation({ ...location, countryCode: value })}>
                   <SelectTrigger id="location-country" className={`mt-1.5 ${errors.locationCountry ? 'border-destructive' : ''}`}>
                     <SelectValue placeholder="Select location country" />
                   </SelectTrigger>
                   <SelectContent>
-                    {COUNTRIES.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    {countries.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -530,7 +594,12 @@ export function OnboardingWizard() {
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Company</p>
                 <p className="text-sm font-medium text-slate-800">{company.name || '-'}</p>
-                <p className="text-sm text-slate-600">{company.country || '-'}</p>
+                <p className="text-sm text-slate-600">
+                  {countryMap.get(company.countryCode)?.name || '-'}
+                </p>
+                <p className="text-sm text-slate-600">
+                  {currencyMap.get(company.currencyCode)?.name || '-'} ({company.currencyCode || '-'})
+                </p>
               </div>
 
               <div className="h-px bg-border" />
@@ -539,7 +608,9 @@ export function OnboardingWizard() {
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">First Location</p>
                 <p className="text-sm font-medium text-slate-800">{location.name || '-'}</p>
                 <p className="text-sm text-slate-600">Type: {locationTypeLabel}</p>
-                <p className="text-sm text-slate-600">{location.city || '-'}, {location.country || '-'}</p>
+                <p className="text-sm text-slate-600">
+                  {location.city || '-'}, {countryMap.get(location.countryCode)?.name || '-'}
+                </p>
                 {location.monthlyEnergyKwh && (
                   <p className="text-sm text-slate-600">Monthly energy: {location.monthlyEnergyKwh} kWh</p>
                 )}

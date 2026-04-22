@@ -59,6 +59,7 @@ export type DashboardData = {
     name: string
     industry: string | null
     country: string | null
+    currencyCode: string | null
     subscriptionTier: string | null
   }
   summary: DashboardSummary
@@ -167,7 +168,7 @@ export async function getDashboardData(requestedCompanyId?: string | null): Prom
   const [companyResult, locationsResult, insightsResult, missionsResult] = await Promise.all([
     supabase
       .from("companies")
-      .select("id, name, industry, country, subscription_tier")
+      .select("id, name, industry, country, currency_code, subscription_tier")
       .eq("id", auth.companyId)
       .single(),
     supabase
@@ -353,6 +354,7 @@ export async function getDashboardData(requestedCompanyId?: string | null): Prom
       name: asString(company.name) ?? "Your company",
       industry: asString(company.industry),
       country: asString(company.country),
+      currencyCode: asString(company.currency_code),
       subscriptionTier: asString(company.subscription_tier),
     },
     summary,

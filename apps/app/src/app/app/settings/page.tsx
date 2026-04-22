@@ -1,15 +1,14 @@
 import { redirect } from "next/navigation"
-import { SignOut } from "@phosphor-icons/react/dist/ssr"
 
 import { createClient } from "@/lib/supabase/server"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { SettingsProfileCard } from "@/components/settings/SettingsProfileCard"
 import { SettingsSecurityCard } from "@/components/settings/SettingsSecurityCard"
 import { SettingsCompanyCard } from "@/components/settings/SettingsCompanyCard"
 import { SettingsPlanCard } from "@/components/settings/SettingsPlanCard"
-import { logoutAction } from "@/lib/actions/settings"
+import { SettingsRegionalCard } from "@/components/settings/SettingsRegionalCard"
+import { getActiveCountries, getActiveCurrencies } from "@/lib/data/regional.actions"
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -34,15 +33,22 @@ export default async function SettingsPage() {
     name: string
     industry: string | null
     country: string | null
+    country_code: string | null
+    currency_code: string | null
     subscription_tier: string | null
   }
+
+  const [countries, currencies] = await Promise.all([
+    getActiveCountries(),
+    getActiveCurrencies(),
+  ])
 
   let company: CompanyRow | null = null
 
   if (companyId) {
     const { data } = await supabase
       .from("companies")
-      .select("id, name, industry, country, subscription_tier")
+      .select("id, name, industry, country, country_code, currency_code, subscription_tier")
       .eq("id", companyId)
       .single()
 
@@ -57,25 +63,12 @@ export default async function SettingsPage() {
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-6 flex flex-wrap items-start justify-end gap-4">
-        <form action={logoutAction}>
-          <Button
-            type="submit"
-            variant="outline"
-            size="sm"
-            className="gap-2 border-border/80 bg-white text-destructive hover:bg-destructive/5 hover:text-destructive"
-          >
-            <SignOut size={16} />
-            Log out
-          </Button>
-        </form>
-      </div>
-
       <Card className="mb-6 rounded-2xl border border-border/80 bg-white/95 py-4 shadow-sm">
         <CardContent className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">Profile</Badge>
           <Badge variant="secondary">Security</Badge>
           {hasCompany ? <Badge variant="secondary">Company</Badge> : null}
+          {hasCompany ? <Badge variant="secondary">Regional settings</Badge> : null}
           <Badge variant="secondary">Plan &amp; Billing</Badge>
         </CardContent>
       </Card>
@@ -92,7 +85,16 @@ export default async function SettingsPage() {
               companyId={company.id}
               name={company.name}
               industry={company.industry}
-              country={company.country}
+            />
+          ) : null}
+
+          {company ? (
+            <SettingsRegionalCard
+              companyId={company.id}
+              countryCode={company.country_code}
+              currencyCode={company.currency_code}
+              countries={countries}
+              currencies={currencies}
             />
           ) : null}
 

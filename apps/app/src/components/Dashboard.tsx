@@ -108,7 +108,13 @@ function MetricCard({
   )
 }
 
-function TopLocationRow({ location }: { location: DashboardTopLocation }) {
+function TopLocationRow({
+  location,
+  currencyCode,
+}: {
+  location: DashboardTopLocation
+  currencyCode: string
+}) {
   return (
     <Link
       href={`/app/locations/${location.id}`}
@@ -124,7 +130,7 @@ function TopLocationRow({ location }: { location: DashboardTopLocation }) {
             {location.city || "City not set"}, {location.country || "Country not set"}
           </p>
         </div>
-        <p className="text-sm font-semibold text-foreground">{formatCurrency(location.estimatedSavings)} / month</p>
+        <p className="text-sm font-semibold text-foreground">{formatCurrency(location.estimatedSavings, currencyCode)} / month</p>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
@@ -138,11 +144,11 @@ function TopLocationRow({ location }: { location: DashboardTopLocation }) {
         </div>
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Estimated value</p>
-          <p className="mt-1 font-semibold text-foreground">{formatCurrency(location.estimatedSavings)}</p>
+          <p className="mt-1 font-semibold text-foreground">{formatCurrency(location.estimatedSavings, currencyCode)}</p>
         </div>
         <div>
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Realized value</p>
-          <p className="mt-1 font-semibold text-foreground">{formatCurrency(location.actualSavings)}</p>
+          <p className="mt-1 font-semibold text-foreground">{formatCurrency(location.actualSavings, currencyCode)}</p>
         </div>
       </div>
     </Link>
@@ -180,6 +186,7 @@ export function Dashboard({ data, errorMessage }: DashboardProps) {
   }
 
   const isPremium = data.company.subscriptionTier === "premium" || data.company.subscriptionTier === "enterprise"
+  const companyCurrencyCode = data.company.currencyCode ?? "EUR"
 
   return (
     <div className="bg-background">
@@ -218,13 +225,13 @@ export function Dashboard({ data, errorMessage }: DashboardProps) {
               <MetricCard
                 icon={<CurrencyEur size={18} weight="duotone" />}
                 label="Monthly savings"
-                value={formatCurrency(data.summary.estimatedMonthlySavings)}
+                value={formatCurrency(data.summary.estimatedMonthlySavings, companyCurrencyCode)}
                 helper="Open missions + new insights"
               />
               <MetricCard
                 icon={<CheckCircle size={18} weight="duotone" />}
                 label="Realized savings"
-                value={formatCurrency(data.summary.realizedMonthlySavings)}
+                value={formatCurrency(data.summary.realizedMonthlySavings, companyCurrencyCode)}
                 helper="Completed missions with actual reports"
                 href="/app/missions"
               />
@@ -238,7 +245,7 @@ export function Dashboard({ data, errorMessage }: DashboardProps) {
               <MetricCard
                 icon={<ChartLine size={18} weight="duotone" />}
                 label="Yearly savings"
-                value={formatCurrency(data.summary.estimatedYearlySavings)}
+                value={formatCurrency(data.summary.estimatedYearlySavings, companyCurrencyCode)}
                 helper="Projected from current monthly estimate"
               />
               <MetricCard
@@ -329,7 +336,7 @@ export function Dashboard({ data, errorMessage }: DashboardProps) {
                   ) : (
                     <div className="space-y-3">
                       {data.topLocations.map((location) => (
-                        <TopLocationRow key={location.id} location={location} />
+                        <TopLocationRow key={location.id} location={location} currencyCode={companyCurrencyCode} />
                       ))}
                     </div>
                   )}
@@ -337,7 +344,7 @@ export function Dashboard({ data, errorMessage }: DashboardProps) {
               </Card>
 
               <div className="space-y-6">
-                <SavingsLeaderboard entries={data.savingsLeaderboard} isPremium={isPremium} />
+                <SavingsLeaderboard entries={data.savingsLeaderboard} isPremium={isPremium} currencyCode={companyCurrencyCode} />
 
                 <Card className="border border-border bg-white">
                   <CardHeader className="flex flex-row items-center justify-between gap-3">
@@ -373,7 +380,7 @@ export function Dashboard({ data, errorMessage }: DashboardProps) {
                             </div>
                             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
                               <span className="font-medium text-foreground">
-                                {formatCurrency(insight.estimated_savings_value)} / month estimated
+                                {formatCurrency(insight.estimated_savings_value, companyCurrencyCode)} / month estimated
                               </span>
                               <span className="text-muted-foreground">
                                 {Math.round(insight.confidence_score * 100)}% confidence • {formatDate(insight.created_at)}
@@ -420,7 +427,7 @@ export function Dashboard({ data, errorMessage }: DashboardProps) {
                             </div>
                             <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
                               <span className="font-medium text-foreground">
-                                {formatCurrency(mission.expected_savings_value)} / month expected
+                                {formatCurrency(mission.expected_savings_value, companyCurrencyCode)} / month expected
                               </span>
                               <span className="inline-flex items-center gap-1 text-muted-foreground">
                                 <Clock className="h-4 w-4" />

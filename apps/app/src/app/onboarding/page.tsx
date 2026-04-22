@@ -4,12 +4,9 @@ import { OnboardingWizard } from "@/components/OnboardingWizard"
 import { isCurrentUserAdmin } from "@/lib/auth/admin"
 import { createClient } from "@/lib/supabase/server"
 import { getOnboardingStatus } from "@/lib/auth/onboarding"
+import { getActiveCountries, getActiveCurrencies } from "@/lib/data/regional.actions"
 
-type OnboardingPageProps = {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>
-}
-
-export default async function OnboardingPage({ searchParams }: OnboardingPageProps) {
+export default async function OnboardingPage() {
   const supabase = await createClient()
 
   const {
@@ -32,5 +29,10 @@ export default async function OnboardingPage({ searchParams }: OnboardingPagePro
     redirect("/app")
   }
 
-  return <OnboardingWizard />
+  const [countries, currencies] = await Promise.all([
+    getActiveCountries(),
+    getActiveCurrencies(),
+  ])
+
+  return <OnboardingWizard countries={countries} currencies={currencies} />
 }

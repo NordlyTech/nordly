@@ -34,8 +34,16 @@ function asNumber(value: unknown): number | null {
   return null
 }
 
-function asBoolean(value: unknown): boolean {
-  return value === true
+function isMissingColumnError(error: unknown, columnName: string): boolean {
+  if (!error || typeof error !== "object") {
+    return false
+  }
+
+  const maybeError = error as { code?: unknown; message?: unknown }
+  const code = typeof maybeError.code === "string" ? maybeError.code : ""
+  const message = typeof maybeError.message === "string" ? maybeError.message : ""
+
+  return (code === "42703" || message.includes("does not exist")) && message.includes(columnName)
 }
 
 function revalidateAdminPaths() {
@@ -49,6 +57,42 @@ export type AdminDashboardStats = {
   companiesTotal: number
   usersTotal: number
   insightsTotal: number
+}
+
+export type AdminDashboardOverview = {
+  stats: {
+    companiesTotal: number
+    usersTotal: number
+    insightsTotal: number
+    pendingModerationTotal: number
+    premiumCompaniesTotal: number
+    failedGenerationsTotal: number
+  }
+  recentCompanies: Array<{
+    id: string
+    name: string
+    country: string | null
+    subscription: string | null
+    createdAt: string | null
+  }>
+  recentGenerations: Array<{
+    id: string
+    companyId: string | null
+    companyName: string | null
+    generationType: string | null
+    status: string | null
+    createdAt: string | null
+  }>
+  moderationQueue: Array<{
+    id: string
+    companyId: string
+    companyName: string
+    title: string
+    status: string
+    createdAt: string | null
+    estimatedSavingsValue: number
+  }>
+  warnings: Array<{ id: string; title: string; message: string; level: "warning" | "info" }>
 }
 
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
@@ -82,6 +126,165 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     companiesTotal,
     usersTotal,
     insightsTotal,
+  }
+}
+
+export async function getAdminDashboardOverview(): Promise<AdminDashboardOverview> {
+  await requireAdminContext()
+  const supabase = createAdminClient()
+
+  const [
+    companiesResult,
+    profilesResult,
+    companyMembersResult,
+    insightsResult,
+    pendingInsightsResult,
+    premiumCompaniesResult,
+    failedGenerationsResult,
+    recentCompaniesResult,
+    recentGenerationsResult,
+    moderationQueueResult,
+  ] = await Promise.all([
+    supabase.from("companies").select("id", { head: true, count: "exact" }),
+    supabase.from("profiles").select("id", { head: true, count: "exact" }),
+    supabase.from("company_members").select("user_id"),
+    supabase.from("insights").select("id", { head: true, count: "exact" }),
+    supabase.from("insights").select("id", { head: true, count: "exact" }).eq("status", "new"),
+    supabase
+      .from("companies")
+      .select("id", { head: true, count: "exact" })
+      .in("subscription_tier", ["premium", "enterprise"]),
+    supabase
+      .from("ai_generations")
+      .select("id", { head: true, count: "exact" })
+      .in("status", ["failed", "error"]),
+    supabase
+      .from("companies")
+      .select("id, name, country, subscription_tier, created_at")
+      .order("created_at", { ascending: false })
+      .limit(6),
+    supabase
+      .from("ai_generations")
+      .select("id, company_id, generation_type, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("insights")
+      .select("id, company_id, title, status, created_at, estimated_savings_value")
+      .eq("status", "new")
+      .order("created_at", { ascending: false })
+      .limit(8),
+  ])
+
+  const companiesTotal = companiesResult.count ?? 0
+  const insightsTotal = insightsResult.count ?? 0
+  const pendingModerationTotal = pendingInsightsResult.count ?? 0
+  const premiumCompaniesTotal = premiumCompaniesResult.count ?? 0
+  const failedGenerationsTotal = failedGenerationsResult.count ?? 0
+
+  let usersTotal = profilesResult.count ?? 0
+  if (usersTotal === 0 && !companyMembersResult.error) {
+    usersTotal = new Set(
+      (companyMembersResult.data ?? [])
+        .map((row) => asString((row as RecordValue).user_id))
+        .filter((id): id is string => id !== null)
+    ).size
+  }
+
+  const recentGenerationRows = (recentGenerationsResult.data ?? []) as RecordValue[]
+  const moderationRows = (moderationQueueResult.data ?? []) as RecordValue[]
+  const companyIds = [
+    ...new Set(
+      [...recentGenerationRows, ...moderationRows]
+        .map((row) => asString(row.company_id))
+        .filter((id): id is string => id !== null)
+    ),
+  ]
+
+  const companiesMap = new Map<string, string>()
+  if (companyIds.length > 0) {
+    const companyLookupResult = await supabase.from("companies").select("id, name").in("id", companyIds)
+    for (const row of companyLookupResult.data ?? []) {
+      const id = asString((row as RecordValue).id)
+      const name = asString((row as RecordValue).name)
+
+      if (id && name) {
+        companiesMap.set(id, name)
+      }
+    }
+  }
+
+  const warnings: Array<{ id: string; title: string; message: string; level: "warning" | "info" }> = []
+
+  if (failedGenerationsTotal > 0) {
+    warnings.push({
+      id: "failed-generations",
+      title: "AI generation failures detected",
+      message: `${failedGenerationsTotal} generation jobs are marked as failed or error. Review logs in AI Generations.`,
+      level: "warning",
+    })
+  }
+
+  if (pendingModerationTotal > 20) {
+    warnings.push({
+      id: "moderation-backlog",
+      title: "Insights moderation queue is growing",
+      message: `${pendingModerationTotal} insights are waiting for moderation.`,
+      level: "warning",
+    })
+  }
+
+  if (warnings.length === 0) {
+    warnings.push({
+      id: "healthy-platform",
+      title: "Platform status is healthy",
+      message: "No critical warnings detected across moderation and generation pipelines.",
+      level: "info",
+    })
+  }
+
+  return {
+    stats: {
+      companiesTotal,
+      usersTotal,
+      insightsTotal,
+      pendingModerationTotal,
+      premiumCompaniesTotal,
+      failedGenerationsTotal,
+    },
+    recentCompanies: ((recentCompaniesResult.data ?? []) as RecordValue[]).map((row) => ({
+      id: asString(row.id) ?? "",
+      name: asString(row.name) ?? "Untitled company",
+      country: asString(row.country),
+      subscription: asString(row.subscription_tier),
+      createdAt: asString(row.created_at),
+    })),
+    recentGenerations: recentGenerationRows.map((row) => {
+      const companyId = asString(row.company_id)
+
+      return {
+        id: asString(row.id) ?? "",
+        companyId,
+        companyName: companyId ? (companiesMap.get(companyId) ?? null) : null,
+        generationType: asString(row.generation_type),
+        status: asString(row.status),
+        createdAt: asString(row.created_at),
+      }
+    }),
+    moderationQueue: moderationRows.map((row) => {
+      const companyId = asString(row.company_id) ?? ""
+
+      return {
+        id: asString(row.id) ?? "",
+        companyId,
+        companyName: companiesMap.get(companyId) ?? "Unknown company",
+        title: asString(row.title) ?? "Untitled insight",
+        status: asString(row.status) ?? "new",
+        createdAt: asString(row.created_at),
+        estimatedSavingsValue: asNumber(row.estimated_savings_value) ?? 0,
+      }
+    }),
+    warnings,
   }
 }
 
@@ -165,6 +368,143 @@ export async function getAdminCompanies(): Promise<AdminCompanyListItem[]> {
       memberUserIds,
     }
   })
+}
+
+export type AdminCompanyDeleteImpact = {
+  companyId: string
+  companyName: string
+  totals: Array<{
+    key: string
+    label: string
+    count: number
+  }>
+}
+
+export async function getAdminCompanyDeleteImpact(companyId: string): Promise<AdminCompanyDeleteImpact | null> {
+  await requireAdminContext()
+
+  if (!companyId || companyId.trim().length === 0) {
+    return null
+  }
+
+  const supabase = createAdminClient()
+  const normalizedCompanyId = companyId.trim()
+
+  const [companyResult, membersResult, locationsResult, insightsResult, missionsResult, generationsResult, reportsResult, savingsRecordsResult] = await Promise.all([
+    supabase.from("companies").select("id, name").eq("id", normalizedCompanyId).maybeSingle(),
+    supabase.from("company_members").select("company_id", { head: true, count: "exact" }).eq("company_id", normalizedCompanyId),
+    supabase.from("locations").select("company_id", { head: true, count: "exact" }).eq("company_id", normalizedCompanyId),
+    supabase.from("insights").select("company_id", { head: true, count: "exact" }).eq("company_id", normalizedCompanyId),
+    supabase.from("missions").select("company_id", { head: true, count: "exact" }).eq("company_id", normalizedCompanyId),
+    supabase.from("ai_generations").select("company_id", { head: true, count: "exact" }).eq("company_id", normalizedCompanyId),
+    supabase.from("reports").select("company_id", { head: true, count: "exact" }).eq("company_id", normalizedCompanyId),
+    supabase.from("savings_records").select("company_id", { head: true, count: "exact" }).eq("company_id", normalizedCompanyId),
+  ])
+
+  if (companyResult.error || !companyResult.data) {
+    return null
+  }
+
+  const company = companyResult.data as RecordValue
+
+  return {
+    companyId: asString(company.id) ?? normalizedCompanyId,
+    companyName: asString(company.name) ?? "Untitled company",
+    totals: [
+      { key: "company_members", label: "Company members", count: membersResult.count ?? 0 },
+      { key: "locations", label: "Locations", count: locationsResult.count ?? 0 },
+      { key: "insights", label: "Insights", count: insightsResult.count ?? 0 },
+      { key: "missions", label: "Missions", count: missionsResult.count ?? 0 },
+      { key: "ai_generations", label: "AI generations", count: generationsResult.count ?? 0 },
+      { key: "reports", label: "Reports", count: reportsResult.count ?? 0 },
+      { key: "savings_records", label: "Savings records", count: savingsRecordsResult.count ?? 0 },
+    ],
+  }
+}
+
+export async function updateAdminCompany(args: {
+  companyId: string
+  name: string
+  country: string
+  subscription: string
+}): Promise<void> {
+  await requireAdminContext()
+
+  const companyId = args.companyId.trim()
+  const name = args.name.trim()
+  const country = args.country.trim()
+  const subscription = args.subscription.trim().toLowerCase()
+
+  if (!companyId) {
+    throw new Error("Invalid company id.")
+  }
+
+  if (!name) {
+    throw new Error("Company name is required.")
+  }
+
+  if (!["free", "premium", "enterprise"].includes(subscription)) {
+    throw new Error("Subscription must be free, premium, or enterprise.")
+  }
+
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from("companies")
+    .update({
+      name,
+      country: country.length > 0 ? country : null,
+      subscription_tier: subscription,
+    })
+    .eq("id", companyId)
+
+  if (error) {
+    throw new Error(`Failed to update company: ${error.message}`)
+  }
+
+  revalidateAdminPaths()
+}
+
+export async function deleteAdminCompany(companyId: string): Promise<void> {
+  await requireAdminContext()
+
+  const normalizedCompanyId = companyId.trim()
+  if (!normalizedCompanyId) {
+    throw new Error("Invalid company id.")
+  }
+
+  const supabase = createAdminClient()
+
+  const deleteSteps: Array<{ table: string; column: string }> = [
+    { table: "reports", column: "company_id" },
+    { table: "savings_records", column: "company_id" },
+    { table: "ai_generations", column: "company_id" },
+    { table: "missions", column: "company_id" },
+    { table: "insights", column: "company_id" },
+    { table: "company_members", column: "company_id" },
+    { table: "locations", column: "company_id" },
+  ]
+
+  for (const step of deleteSteps) {
+    const { error } = await supabase
+      .from(step.table)
+      .delete()
+      .eq(step.column, normalizedCompanyId)
+
+    if (error) {
+      throw new Error(`Failed to delete ${step.table}: ${error.message}`)
+    }
+  }
+
+  const { error } = await supabase
+    .from("companies")
+    .delete()
+    .eq("id", normalizedCompanyId)
+
+  if (error) {
+    throw new Error(`Failed to delete company: ${error.message}`)
+  }
+
+  revalidateAdminPaths()
 }
 
 export type AdminCompanyLocation = {
@@ -290,11 +630,25 @@ export async function getAdminGenerations(limit = 120): Promise<AdminGenerationR
   await requireAdminContext()
   const supabase = createAdminClient()
 
-  const { data, error } = await supabase
+  const initialResult = await supabase
     .from("ai_generations")
-    .select("id, generation_type, status, model_name, model, input_payload_json, output_payload_json, location_id, company_id, created_at")
+    .select("id, generation_type, status, model_name, input_payload_json, output_payload_json, location_id, company_id, created_at")
     .order("created_at", { ascending: false })
     .limit(limit)
+
+  let data = (initialResult.data ?? null) as RecordValue[] | null
+  let error = initialResult.error
+
+  if (error && isMissingColumnError(error, "location_id")) {
+    const fallbackResult = await supabase
+      .from("ai_generations")
+      .select("id, generation_type, status, model_name, input_payload_json, output_payload_json, company_id, created_at")
+      .order("created_at", { ascending: false })
+      .limit(limit)
+
+    data = (fallbackResult.data ?? null) as RecordValue[] | null
+    error = fallbackResult.error
+  }
 
   if (error) {
     throw new Error(`Failed to load AI generation logs: ${error.message}`)
@@ -304,10 +658,10 @@ export async function getAdminGenerations(limit = 120): Promise<AdminGenerationR
     id: asString(row.id) ?? "",
     generationType: asString(row.generation_type),
     status: asString(row.status),
-    model: asString(row.model_name) ?? asString(row.model),
+    model: asString(row.model_name),
     inputPayload: row.input_payload_json ?? null,
     outputPayload: row.output_payload_json ?? null,
-    locationId: asString(row.location_id),
+    locationId: asString(row.location_id) ?? asString((row.input_payload_json as RecordValue | null)?.location_id),
     companyId: asString(row.company_id),
     createdAt: asString(row.created_at),
   }))
@@ -322,17 +676,31 @@ export async function rerunAdminGeneration(generationId: string): Promise<{ summ
 
   const supabase = createAdminClient()
 
-  const { data, error } = await supabase
+  const initialResult = await supabase
     .from("ai_generations")
     .select("id, location_id, generation_type, input_payload_json")
     .eq("id", generationId)
     .maybeSingle()
 
+  let data = (initialResult.data ?? null) as RecordValue | null
+  let error = initialResult.error
+
+  if (error && isMissingColumnError(error, "location_id")) {
+    const fallbackResult = await supabase
+      .from("ai_generations")
+      .select("id, generation_type, input_payload_json")
+      .eq("id", generationId)
+      .maybeSingle()
+
+    data = (fallbackResult.data ?? null) as RecordValue | null
+    error = fallbackResult.error
+  }
+
   if (error || !data) {
     throw new Error("Generation not found.")
   }
 
-  const row = data as RecordValue
+  const row = data
   const generationType = asString(row.generation_type)
   if (generationType && generationType !== "location_insights") {
     throw new Error("Only location insight generations can be re-run.")

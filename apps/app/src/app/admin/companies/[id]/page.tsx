@@ -1,13 +1,28 @@
 import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 
+import {
+  DataCell,
+  DataHeaderCell,
+  DataTable,
+  DataTableBody,
+  DataTableHead,
+  DataTableTable,
+  EmptyState,
+  SectionCard,
+  StatusBadge,
+} from "@/components/admin-ui/primitives"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { getAdminCompanyDetail, regenerateLocationInsightsAsAdmin } from "@/lib/data/admin.actions"
+import {
+  deleteAdminCompany,
+  getAdminCompanyDeleteImpact,
+  getAdminCompanyDetail,
+  regenerateLocationInsightsAsAdmin,
+} from "@/lib/data/admin.actions"
 
 type CompanyDetailPageProps = {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string; notice?: string }>
+  searchParams: Promise<{ tab?: string; notice?: string; delete?: string }>
 }
 
 const TAB_VALUES = ["locations", "insights", "missions"] as const
@@ -40,8 +55,10 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: C
   const resolvedSearchParams = await searchParams
   const companyId = resolvedParams.id
   const tab: CompanyTab = isTab(resolvedSearchParams.tab) ? resolvedSearchParams.tab : "locations"
+  const deleteState = resolvedSearchParams.delete ?? ""
 
   const company = await getAdminCompanyDetail(companyId)
+  const deleteImpact = deleteState ? await getAdminCompanyDeleteImpact(companyId) : null
 
   if (!company) {
     notFound()
@@ -68,27 +85,37 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: C
     }
   }
 
+  async function deleteAction(formData: FormData) {
+    "use server"
+
+    const targetCompanyId = String(formData.get("companyId") ?? "").trim()
+
+    try {
+      await deleteAdminCompany(targetCompanyId)
+      redirect("/admin/companies?notice=Company+deleted")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete company"
+      redirect(`/admin/companies/${targetCompanyId}?tab=${tab}&delete=confirm&notice=${encodeURIComponent(message)}`)
+    }
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Company</p>
-          <h1 className="mt-1 text-2xl font-semibold text-slate-900">{company.name}</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {company.country ?? "-"} · {company.industry ?? "-"} · {company.subscription ?? "free"}
-          </p>
-        </div>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button type="button" variant="destructive" size="sm" asChild>
+          <Link href={`/admin/companies/${company.id}?tab=${tab}&delete=confirm`}>Delete company</Link>
+        </Button>
         <Button variant="outline" asChild>
           <Link href="/admin/companies">Back to companies</Link>
         </Button>
       </div>
 
       {resolvedSearchParams.notice ? (
-        <Card className="rounded-2xl border-slate-200 bg-slate-50 py-3">
-          <CardContent>
-            <p className="text-sm text-slate-700">{resolvedSearchParams.notice}</p>
-          </CardContent>
-        </Card>
+        <SectionCard title="Notice" description="Latest company action result.">
+          <div className="p-4">
+            <p className="text-sm text-foreground">{resolvedSearchParams.notice}</p>
+          </div>
+        </SectionCard>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
@@ -99,7 +126,7 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: C
               key={tabValue}
               href={`/admin/companies/${company.id}?tab=${tabValue}`}
               className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                active ? "bg-slate-900 text-white" : "bg-white text-slate-700 hover:bg-slate-100"
+                active ? "bg-primary text-white" : "bg-white text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               {tabValue[0].toUpperCase() + tabValue.slice(1)}
@@ -108,29 +135,69 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: C
         })}
       </div>
 
+      <SectionCard title="Danger zone" description="Delete this company and all dependent records.">
+        <div className="space-y-4 p-4">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            Deleting a company is permanent. Review the cascade impact before confirming.
+          </div>
+
+          {deleteImpact ? (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {deleteImpact.totals.map((item) => (
+                  <div key={item.key} className="rounded-xl border border-border/80 bg-white px-4 py-3 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{item.label}</p>
+                    <p className="mt-2 text-2xl font-semibold text-foreground">{item.count}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <form action={deleteAction}>
+                  <input type="hidden" name="companyId" value={company.id} />
+                  <Button type="submit" size="sm" variant="destructive" className="min-w-52">
+                    Confirm delete company
+                  </Button>
+                </form>
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <Link href={`/admin/companies/${company.id}?tab=${tab}`}>Cancel</Link>
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="destructive" size="sm" className="min-w-52" asChild>
+                <Link href={`/admin/companies/${company.id}?tab=${tab}&delete=confirm`}>Review delete impact</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      </SectionCard>
+
       {tab === "locations" ? (
-        <Card className="rounded-2xl border-slate-200 py-0">
-          <CardHeader className="border-b border-slate-200 py-4">
-            <CardTitle className="text-base">Locations</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50">
+        <SectionCard title="Locations" description="Location inventory and AI regeneration actions.">
+          {company.locations.length === 0 ? (
+            <div className="p-4">
+              <EmptyState title="No locations found" description="Locations will appear once this company is configured." />
+            </div>
+          ) : (
+            <DataTable>
+              <DataTableTable>
+                <DataTableHead>
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">Name</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">Type</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">City</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">Action</th>
+                    <DataHeaderCell>Name</DataHeaderCell>
+                    <DataHeaderCell>Type</DataHeaderCell>
+                    <DataHeaderCell>City</DataHeaderCell>
+                    <DataHeaderCell>Action</DataHeaderCell>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                </DataTableHead>
+                <DataTableBody>
                   {company.locations.map((location) => (
                     <tr key={location.id}>
-                      <td className="px-4 py-3 font-medium text-slate-900">{location.name}</td>
-                      <td className="px-4 py-3 text-slate-600">{location.locationType ?? "-"}</td>
-                      <td className="px-4 py-3 text-slate-600">{location.city ?? "-"}</td>
-                      <td className="px-4 py-3 text-slate-600">
+                      <DataCell className="font-medium text-foreground">{location.name}</DataCell>
+                      <DataCell>{location.locationType ?? "-"}</DataCell>
+                      <DataCell>{location.city ?? "-"}</DataCell>
+                      <DataCell>
                         <form action={regenerateAction}>
                           <input type="hidden" name="companyId" value={company.id} />
                           <input type="hidden" name="locationId" value={location.id} />
@@ -138,99 +205,88 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: C
                             Regenerate AI insights
                           </Button>
                         </form>
-                      </td>
+                      </DataCell>
                     </tr>
                   ))}
-                  {company.locations.length === 0 ? (
-                    <tr>
-                      <td className="px-4 py-6 text-slate-500" colSpan={4}>
-                        No locations found.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                </DataTableBody>
+              </DataTableTable>
+            </DataTable>
+          )}
+        </SectionCard>
       ) : null}
 
       {tab === "insights" ? (
-        <Card className="rounded-2xl border-slate-200 py-0">
-          <CardHeader className="border-b border-slate-200 py-4">
-            <CardTitle className="text-base">Insights</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50">
+        <SectionCard title="Insights" description="Insight outcomes and estimated savings.">
+          {company.insights.length === 0 ? (
+            <div className="p-4">
+              <EmptyState title="No insights found" description="Generated insights for this company appear here." />
+            </div>
+          ) : (
+            <DataTable>
+              <DataTableTable>
+                <DataTableHead>
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">Title</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">Savings</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">Created</th>
+                    <DataHeaderCell>Title</DataHeaderCell>
+                    <DataHeaderCell>Status</DataHeaderCell>
+                    <DataHeaderCell>Savings</DataHeaderCell>
+                    <DataHeaderCell>Created</DataHeaderCell>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                </DataTableHead>
+                <DataTableBody>
                   {company.insights.map((insight) => (
                     <tr key={insight.id}>
-                      <td className="px-4 py-3 font-medium text-slate-900">{insight.title}</td>
-                      <td className="px-4 py-3 text-slate-600">{insight.status}</td>
-                      <td className="px-4 py-3 text-slate-600">{formatCurrency(insight.estimatedSavingsValue)}</td>
-                      <td className="px-4 py-3 text-slate-600">{formatDate(insight.createdAt)}</td>
+                      <DataCell className="font-medium text-foreground">{insight.title}</DataCell>
+                      <DataCell>
+                        <StatusBadge tone={insight.status === "accepted" ? "completed" : insight.status === "dismissed" || insight.status === "archived" ? "failed" : "pending"}>
+                          {insight.status}
+                        </StatusBadge>
+                      </DataCell>
+                      <DataCell>{formatCurrency(insight.estimatedSavingsValue)}</DataCell>
+                      <DataCell>{formatDate(insight.createdAt)}</DataCell>
                     </tr>
                   ))}
-                  {company.insights.length === 0 ? (
-                    <tr>
-                      <td className="px-4 py-6 text-slate-500" colSpan={4}>
-                        No insights found.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                </DataTableBody>
+              </DataTableTable>
+            </DataTable>
+          )}
+        </SectionCard>
       ) : null}
 
       {tab === "missions" ? (
-        <Card className="rounded-2xl border-slate-200 py-0">
-          <CardHeader className="border-b border-slate-200 py-4">
-            <CardTitle className="text-base">Missions</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="bg-slate-50">
+        <SectionCard title="Missions" description="Mission pipeline and expected savings.">
+          {company.missions.length === 0 ? (
+            <div className="p-4">
+              <EmptyState title="No missions found" description="Accepted insights will create missions for this company." />
+            </div>
+          ) : (
+            <DataTable>
+              <DataTableTable>
+                <DataTableHead>
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">Title</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">Expected Savings</th>
-                    <th className="px-4 py-3 text-left font-medium text-slate-600">Created</th>
+                    <DataHeaderCell>Title</DataHeaderCell>
+                    <DataHeaderCell>Status</DataHeaderCell>
+                    <DataHeaderCell>Expected Savings</DataHeaderCell>
+                    <DataHeaderCell>Created</DataHeaderCell>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
+                </DataTableHead>
+                <DataTableBody>
                   {company.missions.map((mission) => (
                     <tr key={mission.id}>
-                      <td className="px-4 py-3 font-medium text-slate-900">{mission.title}</td>
-                      <td className="px-4 py-3 text-slate-600">{mission.status}</td>
-                      <td className="px-4 py-3 text-slate-600">{formatCurrency(mission.expectedSavingsValue)}</td>
-                      <td className="px-4 py-3 text-slate-600">{formatDate(mission.createdAt)}</td>
+                      <DataCell className="font-medium text-foreground">{mission.title}</DataCell>
+                      <DataCell>
+                        <StatusBadge tone={mission.status === "completed" ? "completed" : mission.status === "canceled" ? "failed" : "active"}>
+                          {mission.status}
+                        </StatusBadge>
+                      </DataCell>
+                      <DataCell>{formatCurrency(mission.expectedSavingsValue)}</DataCell>
+                      <DataCell>{formatDate(mission.createdAt)}</DataCell>
                     </tr>
                   ))}
-                  {company.missions.length === 0 ? (
-                    <tr>
-                      <td className="px-4 py-6 text-slate-500" colSpan={4}>
-                        No missions found.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                </DataTableBody>
+              </DataTableTable>
+            </DataTable>
+          )}
+        </SectionCard>
       ) : null}
     </div>
   )

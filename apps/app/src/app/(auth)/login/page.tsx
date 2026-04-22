@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { FormEvent, useEffect, useState } from "react"
+import { FormEvent, useEffect, useMemo, useState } from "react"
 import { type EmailOtpType } from "@supabase/supabase-js"
 
 import { NordlyMark } from "@/components/brand/NordlyMark"
@@ -12,31 +12,44 @@ import { createClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = createClient()
-  const [notice, setNotice] = useState<string | null>(null)
+  const supabase = useMemo(() => createClient(), [])
+  const urlParams = useMemo(() => {
+    if (typeof window === "undefined") {
+      return {
+        notice: null as string | null,
+        shouldRunImpersonation: false,
+        tokenHash: null as string | null,
+        verifyType: null as EmailOtpType | null,
+        nextPath: null as string | null,
+      }
+    }
+
+    const params = new URLSearchParams(window.location.search)
+    const tokenHash = params.get("token_hash")
+    const verifyType = params.get("type") as EmailOtpType | null
+    const shouldImpersonate = params.get("impersonate") === "1"
+
+    return {
+      notice: params.get("notice"),
+      shouldRunImpersonation: shouldImpersonate && !!tokenHash && !!verifyType,
+      tokenHash,
+      verifyType,
+      nextPath: params.get("next"),
+    }
+  }, [])
+
+  const { notice, shouldRunImpersonation, tokenHash, verifyType, nextPath } = urlParams
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isImpersonating, setIsImpersonating] = useState(false)
+  const [isImpersonating, setIsImpersonating] = useState(shouldRunImpersonation)
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const noticeParam = params.get("notice")
-    setNotice(noticeParam)
-
-    const shouldImpersonate = params.get("impersonate") === "1"
-    const tokenHash = params.get("token_hash")
-    const verifyType = params.get("type") as EmailOtpType | null
-    const nextPath = params.get("next")
-
-    if (!shouldImpersonate || !tokenHash || !verifyType) {
+    if (!shouldRunImpersonation || !tokenHash || !verifyType) {
       return
     }
-
-    setIsImpersonating(true)
-    setError(null)
 
     void (async () => {
       const { error: verifyError } = await supabase.auth.verifyOtp({
@@ -54,7 +67,7 @@ export default function LoginPage() {
       router.replace(redirectPath)
       router.refresh()
     })()
-  }, [])
+  }, [nextPath, router, shouldRunImpersonation, supabase, tokenHash, verifyType])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

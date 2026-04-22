@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { generateInsightsAction } from "@/lib/actions/generateInsights"
 import { getCompanyLocationById } from "@/lib/data/locations.actions"
+import { getCompanyRegionalSettings } from "@/lib/data/regional.actions"
 import {
   formatCurrency,
   formatNumber,
@@ -65,6 +66,7 @@ export default function LocationDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null)
+  const [companyCurrencyCode, setCompanyCurrencyCode] = useState<string>("EUR")
 
   useEffect(() => {
     if (!toast) return
@@ -95,6 +97,19 @@ export default function LocationDetailPage() {
 
     void load()
   }, [locationId])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const settings = await getCompanyRegionalSettings()
+        if (settings?.companyCurrencyCode) {
+          setCompanyCurrencyCode(settings.companyCurrencyCode)
+        }
+      } catch {
+        // Non-fatal; default EUR formatting remains.
+      }
+    })()
+  }, [])
 
   if (loading) {
     return (
@@ -225,19 +240,19 @@ export default function LocationDetailPage() {
         <Card className="rounded-2xl py-4">
           <CardContent>
             <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Expected monthly savings</p>
-            <p className="mt-2 text-2xl font-semibold">{formatCurrency(monthlySavings)}</p>
+            <p className="mt-2 text-2xl font-semibold">{formatCurrency(monthlySavings, companyCurrencyCode)}</p>
           </CardContent>
         </Card>
         <Card className="rounded-2xl py-4">
           <CardContent>
             <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Actual monthly savings</p>
-            <p className="mt-2 text-2xl font-semibold">{formatCurrency(location.actual_savings_value)}</p>
+            <p className="mt-2 text-2xl font-semibold">{formatCurrency(location.actual_savings_value, companyCurrencyCode)}</p>
           </CardContent>
         </Card>
         <Card className="rounded-2xl py-4">
           <CardContent>
             <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Expected yearly savings</p>
-            <p className="mt-2 text-2xl font-semibold">{formatCurrency(yearlySavings)}</p>
+            <p className="mt-2 text-2xl font-semibold">{formatCurrency(yearlySavings, companyCurrencyCode)}</p>
           </CardContent>
         </Card>
         <Card className="rounded-2xl py-4">

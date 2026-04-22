@@ -60,6 +60,7 @@ function mapLocationRow(row: RecordValue): CompanyLocationRecord {
     location_type: normalizeLocationType(row.location_type),
     city: asString(row.city),
     country: asString(row.country),
+    country_code: asString(row.country_code),
     floor_area_sqm: asNumber(row.floor_area_sqm),
     insights_count: 0,
     missions_count: 0,
@@ -189,7 +190,7 @@ export async function getCompanyLocations(): Promise<CompanyLocationRecord[]> {
 
   const { data, error } = await supabase
     .from("locations")
-    .select("id, name, location_type, city, country, floor_area_sqm, created_at")
+    .select("id, name, location_type, city, country, country_code, floor_area_sqm, created_at")
     .eq("company_id", auth.companyId)
     .order("created_at", { ascending: false })
 
@@ -219,7 +220,7 @@ export async function getCompanyLocationById(locationId: string): Promise<Compan
 
   const { data, error } = await supabase
     .from("locations")
-    .select("id, name, location_type, city, country, floor_area_sqm, created_at")
+    .select("id, name, location_type, city, country, country_code, floor_area_sqm, created_at")
     .eq("company_id", auth.companyId)
     .eq("id", locationId)
     .maybeSingle()
@@ -270,6 +271,7 @@ export async function createCompanyLocation(input: CreateLocationInput): Promise
     location_type: input.location_type,
     city: input.city?.trim() || null,
     country: input.country?.trim() || null,
+    country_code: input.country_code?.trim().toUpperCase() || null,
     floor_area_sqm: input.floor_area_sqm ?? null,
     operating_hours_notes: input.operating_hours_notes?.trim() || null,
   }
@@ -277,7 +279,7 @@ export async function createCompanyLocation(input: CreateLocationInput): Promise
   const { data, error } = await supabase
     .from("locations")
     .insert(payload)
-    .select("id, name, location_type, city, country, floor_area_sqm, created_at")
+    .select("id, name, location_type, city, country, country_code, floor_area_sqm, created_at")
     .maybeSingle()
 
   if (error || !data) {

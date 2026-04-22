@@ -86,7 +86,7 @@ export async function getOnboardingStatus(): Promise<OnboardingStatus> {
   }
 
   // Check if company has at least one location with location_type
-  const { data: locations, error: locationError } = await supabase
+  const { data: locations } = await supabase
     .from("locations")
     .select("id, location_type")
     .eq("company_id", companyId)
