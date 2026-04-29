@@ -608,7 +608,7 @@ export default function MissionsPage() {
       })
 
       if (!result.ok) {
-        setToast({ type: "error", message: "Could not record measured savings right now." })
+        setToast({ type: "error", message: result.error })
         return
       }
 

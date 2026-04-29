@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 
+import { getCurrentMonthBillingPeriod, insertBillingRecord } from "@/lib/data/billing-records.actions"
 import { createClient } from "@/lib/supabase/server"
 import {
   LOCATION_TYPES,
@@ -62,10 +63,13 @@ function mapLocationRow(row: RecordValue): CompanyLocationRecord {
     country: asString(row.country),
     country_code: asString(row.country_code),
     floor_area_sqm: asNumber(row.floor_area_sqm),
+    monthly_energy_kwh: asNumber(row.monthly_energy_kwh),
+    monthly_energy_cost: asNumber(row.monthly_energy_cost),
     insights_count: 0,
     missions_count: 0,
     expected_savings_value: 0,
     actual_savings_value: 0,
+    billing_records_count: 0,
     created_at: asString(row.created_at),
   }
 }
@@ -73,7 +77,7 @@ function mapLocationRow(row: RecordValue): CompanyLocationRecord {
 async function resolveLocationMetrics(companyId: string) {
   const supabase = await createClient()
 
-  const [insightsResult, missionsResult] = await Promise.all([
+  const [insightsResult, missionsResult, billingResult] = await Promise.all([
     supabase
       .from("insights")
       .select("location_id")
@@ -82,6 +86,10 @@ async function resolveLocationMetrics(companyId: string) {
       .from("missions")
       .select("location_id, status, expected_savings_value, actual_savings_value")
       .eq("company_id", companyId),
+    supabase
+      .from("billing_records")
+      .select("location_id, energy_kwh, energy_cost")
+      .eq("company_id", companyId),
   ])
 
   const metrics = new Map<string, {
@@ -89,6 +97,7 @@ async function resolveLocationMetrics(companyId: string) {
     missionsCount: number
     expectedSavingsValue: number
     actualSavingsValue: number
+    billingRecordsCount: number
   }>()
 
   if (!insightsResult.error) {
@@ -102,6 +111,7 @@ async function resolveLocationMetrics(companyId: string) {
         missionsCount: 0,
         expectedSavingsValue: 0,
         actualSavingsValue: 0,
+        billingRecordsCount: 0,
       }
       current.insightsCount += 1
       metrics.set(locationId, current)
@@ -119,6 +129,7 @@ async function resolveLocationMetrics(companyId: string) {
         missionsCount: 0,
         expectedSavingsValue: 0,
         actualSavingsValue: 0,
+        billingRecordsCount: 0,
       }
 
       current.missionsCount += 1
@@ -132,6 +143,28 @@ async function resolveLocationMetrics(companyId: string) {
         current.actualSavingsValue += asNumber(record.actual_savings_value) ?? 0
       }
 
+      metrics.set(locationId, current)
+    }
+  }
+
+  if (!billingResult.error) {
+    for (const row of billingResult.data ?? []) {
+      const record = row as RecordValue
+      const locationId = asString(record.location_id)
+      if (!locationId) continue
+
+      const hasBillingData = asNumber(record.energy_kwh) !== null || asNumber(record.energy_cost) !== null
+      if (!hasBillingData) continue
+
+      const current = metrics.get(locationId) ?? {
+        insightsCount: 0,
+        missionsCount: 0,
+        expectedSavingsValue: 0,
+        actualSavingsValue: 0,
+        billingRecordsCount: 0,
+      }
+
+      current.billingRecordsCount += 1
       metrics.set(locationId, current)
     }
   }
@@ -190,7 +223,7 @@ export async function getCompanyLocations(): Promise<CompanyLocationRecord[]> {
 
   const { data, error } = await supabase
     .from("locations")
-    .select("id, name, location_type, city, country, country_code, floor_area_sqm, created_at")
+    .select("id, name, location_type, city, country, country_code, floor_area_sqm, monthly_energy_kwh, monthly_energy_cost, created_at")
     .eq("company_id", auth.companyId)
     .order("created_at", { ascending: false })
 
@@ -210,6 +243,7 @@ export async function getCompanyLocations(): Promise<CompanyLocationRecord[]> {
       missions_count: locationMetrics?.missionsCount ?? 0,
       expected_savings_value: locationMetrics?.expectedSavingsValue ?? 0,
       actual_savings_value: locationMetrics?.actualSavingsValue ?? 0,
+      billing_records_count: locationMetrics?.billingRecordsCount ?? 0,
     }
   })
 }
@@ -220,7 +254,7 @@ export async function getCompanyLocationById(locationId: string): Promise<Compan
 
   const { data, error } = await supabase
     .from("locations")
-    .select("id, name, location_type, city, country, country_code, floor_area_sqm, created_at")
+    .select("id, name, location_type, city, country, country_code, floor_area_sqm, monthly_energy_kwh, monthly_energy_cost, created_at")
     .eq("company_id", auth.companyId)
     .eq("id", locationId)
     .maybeSingle()
@@ -243,6 +277,7 @@ export async function getCompanyLocationById(locationId: string): Promise<Compan
     missions_count: locationMetrics?.missionsCount ?? 0,
     expected_savings_value: locationMetrics?.expectedSavingsValue ?? 0,
     actual_savings_value: locationMetrics?.actualSavingsValue ?? 0,
+    billing_records_count: locationMetrics?.billingRecordsCount ?? 0,
   }
 }
 
@@ -265,28 +300,88 @@ export async function createCompanyLocation(input: CreateLocationInput): Promise
     }
   }
 
+  if (input.monthly_energy_kwh !== undefined && input.monthly_energy_kwh !== null) {
+    if (!Number.isFinite(input.monthly_energy_kwh) || input.monthly_energy_kwh < 0) {
+      throw new Error("Monthly energy kWh must be zero or greater when provided.")
+    }
+  }
+
+  if (input.monthly_energy_cost !== undefined && input.monthly_energy_cost !== null) {
+    if (!Number.isFinite(input.monthly_energy_cost) || input.monthly_energy_cost < 0) {
+      throw new Error("Monthly energy cost must be zero or greater when provided.")
+    }
+  }
+
+  const normalizedCity = input.city?.trim() || null
+  const normalizedCountry = input.country?.trim() || null
+  const normalizedCountryCode = input.country_code?.trim().toUpperCase() || null
+  const normalizedOperatingHoursNotes = input.operating_hours_notes?.trim() || null
+  const normalizedMonthlyEnergyKwh = input.monthly_energy_kwh ?? null
+  const normalizedMonthlyEnergyCost = input.monthly_energy_cost ?? null
+
   const payload: Record<string, unknown> = {
     company_id: auth.companyId,
     name: normalizedName,
     location_type: input.location_type,
-    city: input.city?.trim() || null,
-    country: input.country?.trim() || null,
-    country_code: input.country_code?.trim().toUpperCase() || null,
+    city: normalizedCity,
+    country: normalizedCountry,
+    country_code: normalizedCountryCode,
     floor_area_sqm: input.floor_area_sqm ?? null,
-    operating_hours_notes: input.operating_hours_notes?.trim() || null,
+    operating_hours_notes: normalizedOperatingHoursNotes,
+    monthly_energy_kwh: normalizedMonthlyEnergyKwh,
+    monthly_energy_cost: normalizedMonthlyEnergyCost,
   }
 
   const { data, error } = await supabase
     .from("locations")
     .insert(payload)
-    .select("id, name, location_type, city, country, country_code, floor_area_sqm, created_at")
+    .select("id, name, location_type, city, country, country_code, floor_area_sqm, monthly_energy_kwh, monthly_energy_cost, created_at")
     .maybeSingle()
 
   if (error || !data) {
     throw new Error(`Failed to create location: ${error?.message ?? "Unknown error"}`)
   }
 
-  const location = mapLocationRow(data as RecordValue)
+  const location = {
+    ...mapLocationRow(data as RecordValue),
+    city: normalizedCity,
+    country: normalizedCountry,
+    country_code: normalizedCountryCode,
+    monthly_energy_kwh: normalizedMonthlyEnergyKwh,
+    monthly_energy_cost: normalizedMonthlyEnergyCost,
+  }
+
+  if (normalizedMonthlyEnergyKwh !== null || normalizedMonthlyEnergyCost !== null) {
+    const { data: companyData, error: companyError } = await supabase
+      .from("companies")
+      .select("currency_code")
+      .eq("id", auth.companyId)
+      .maybeSingle()
+
+    if (companyError) {
+      await supabase.from("locations").delete().eq("company_id", auth.companyId).eq("id", location.id)
+      throw new Error(`Failed to resolve company currency: ${companyError.message}`)
+    }
+
+    try {
+      const { billingPeriodStart, billingPeriodEnd } = await getCurrentMonthBillingPeriod()
+      await insertBillingRecord({
+        companyId: auth.companyId,
+        locationId: location.id,
+        billingPeriodStart,
+        billingPeriodEnd,
+        energyKwh: normalizedMonthlyEnergyKwh,
+        energyCost: normalizedMonthlyEnergyCost,
+        currencyCode: asString((companyData as RecordValue | null)?.currency_code),
+        sourceType: "onboarding",
+      })
+      location.billing_records_count = 1
+    } catch (billingError) {
+      await supabase.from("locations").delete().eq("company_id", auth.companyId).eq("id", location.id)
+      throw billingError instanceof Error ? billingError : new Error("Failed to create billing record.")
+    }
+  }
+
   revalidateLocationMutationPaths(location.id)
   return location
 }

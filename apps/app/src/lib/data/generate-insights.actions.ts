@@ -4,6 +4,7 @@ import OpenAI from "openai"
 
 import { buildUserPrompt, developerPrompt, promptVersion, systemPrompt } from "@/lib/ai/prompts/generateInsightsPrompt"
 import { insightGenerationSchema, type GeneratedInsight, type InsightGenerationOutput } from "@/lib/ai/schemas/insightGeneration"
+import { getLocationEnergyBaseline, type LocationEnergyBaseline } from "@/lib/data/billing-records.actions"
 import { LOCATION_TYPE_LABELS, LOCATION_TYPES, type LocationType } from "@/lib/data/locations.shared"
 import { createClient } from "@/lib/supabase/server"
 
@@ -39,6 +40,7 @@ type LocationContext = {
   operatingHoursNotes: string | null
   monthlyEnergyKwh: number | null
   monthlyEnergyCost: number | null
+  billingBaseline: LocationEnergyBaseline
 }
 
 type NormalizedGeneratedInsight = GeneratedInsight
@@ -354,6 +356,10 @@ async function loadGenerationContext(auth: AuthContext, locationId: string) {
     operatingHoursNotes: asString(locationRow.operating_hours_notes),
     monthlyEnergyKwh: asNumber(locationRow.monthly_energy_kwh),
     monthlyEnergyCost: asNumber(locationRow.monthly_energy_cost),
+    billingBaseline: await getLocationEnergyBaseline(asString(locationRow.id) ?? locationId, {
+      companyId: asString(locationRow.company_id) ?? auth.companyId,
+      isAdmin: auth.isAdmin,
+    }),
   }
 
   const { data: companyData, error: companyError } = await supabase
@@ -424,6 +430,8 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
   const { company, location } = await loadGenerationContext(auth, locationId.trim())
   const modelName = process.env.OPENAI_MODEL?.trim() || "gpt-4.1-mini"
   const sparseContext = isSparseContext(location)
+  const monthlyEnergyKwh = location.billingBaseline.avg_kwh ?? location.monthlyEnergyKwh
+  const monthlyEnergyCost = location.billingBaseline.avg_cost ?? location.monthlyEnergyCost
 
   const inputPayload = {
     company_id: company.id,
@@ -443,8 +451,12 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
     floor_area_sqm: location.floorAreaSqm,
     occupancy_notes: location.occupancyNotes,
     operating_hours_notes: location.operatingHoursNotes,
-    monthly_energy_kwh: location.monthlyEnergyKwh,
-    monthly_energy_cost: location.monthlyEnergyCost,
+    monthly_energy_kwh: monthlyEnergyKwh,
+    monthly_energy_cost: monthlyEnergyCost,
+    avg_monthly_kwh: location.billingBaseline.avg_kwh,
+    avg_monthly_cost: location.billingBaseline.avg_cost,
+    billing_data_points_count: location.billingBaseline.data_points_count,
+    cost_per_kwh: location.billingBaseline.cost_per_kwh,
     currency: company.currencyCode,
     additional_notes: null,
     equipment_list: [],
@@ -487,8 +499,12 @@ export async function generateInsightsForLocation(locationId: string): Promise<G
             floorAreaSqm: location.floorAreaSqm,
             occupancyNotes: location.occupancyNotes,
             operatingHoursNotes: location.operatingHoursNotes,
-            monthlyEnergyKwh: location.monthlyEnergyKwh,
-            monthlyEnergyCost: location.monthlyEnergyCost,
+            monthlyEnergyKwh,
+            monthlyEnergyCost,
+            avgMonthlyKwh: location.billingBaseline.avg_kwh,
+            avgMonthlyCost: location.billingBaseline.avg_cost,
+            billingDataPointsCount: location.billingBaseline.data_points_count,
+            costPerKwh: location.billingBaseline.cost_per_kwh,
             currency: company.currencyCode,
             additionalNotes: null,
             equipmentList: [],

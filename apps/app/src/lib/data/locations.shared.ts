@@ -34,10 +34,13 @@ export type CompanyLocationRecord = {
   country: string | null
   country_code: string | null
   floor_area_sqm: number | null
+  monthly_energy_kwh: number | null
+  monthly_energy_cost: number | null
   insights_count: number
   missions_count: number
   expected_savings_value: number
   actual_savings_value: number
+  billing_records_count: number
   created_at: string | null
 }
 

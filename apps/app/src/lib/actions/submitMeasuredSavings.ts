@@ -52,6 +52,23 @@ function normalizeMissionStatus(value: unknown): "open" | "in_progress" | "compl
   return "open"
 }
 
+function isMissingColumnError(error: unknown, columnName: string) {
+  if (!error || typeof error !== "object") {
+    return false
+  }
+
+  const candidate = error as Record<string, unknown>
+  const message = asString(candidate.message)?.toLowerCase() ?? ""
+  const details = asString(candidate.details)?.toLowerCase() ?? ""
+  const hint = asString(candidate.hint)?.toLowerCase() ?? ""
+  const column = columnName.toLowerCase()
+
+  return (
+    message.includes("column") &&
+    (message.includes(column) || details.includes(column) || hint.includes(column))
+  )
+}
+
 function revalidateMeasuredSavingsPaths() {
   revalidatePath("/app")
   revalidatePath("/dashboard")
@@ -150,7 +167,24 @@ export async function submitMeasuredSavingsAction(
       .eq("company_id", auth.companyId)
 
     if (updateError) {
-      return { ok: false, error: "Could not record measured savings right now." }
+      const missingNoteColumn = isMissingColumnError(updateError, "actual_savings_note")
+      const missingRecordedAtColumn = isMissingColumnError(updateError, "actual_savings_recorded_at")
+
+      if (!missingNoteColumn && !missingRecordedAtColumn) {
+        return { ok: false, error: "Could not record measured savings right now." }
+      }
+
+      const { error: fallbackUpdateError } = await supabase
+        .from("missions")
+        .update({
+          actual_savings_value: Math.round(value),
+        })
+        .eq("id", missionId)
+        .eq("company_id", auth.companyId)
+
+      if (fallbackUpdateError) {
+        return { ok: false, error: "Could not record measured savings right now." }
+      }
     }
 
     revalidateMeasuredSavingsPaths()

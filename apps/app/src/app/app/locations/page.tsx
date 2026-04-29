@@ -67,6 +67,8 @@ type AddLocationFormState = {
   country_code: string
   floor_area_sqm: string
   operating_hours_notes: string
+  monthly_energy_kwh: string
+  monthly_energy_cost: string
 }
 
 const INITIAL_FORM_STATE: AddLocationFormState = {
@@ -77,6 +79,22 @@ const INITIAL_FORM_STATE: AddLocationFormState = {
   country_code: "",
   floor_area_sqm: "",
   operating_hours_notes: "",
+  monthly_energy_kwh: "",
+  monthly_energy_cost: "",
+}
+
+function getDataQualityBadge(location: CompanyLocationRecord) {
+  if (location.billing_records_count > 0) {
+    return {
+      label: "Based on real data",
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    }
+  }
+
+  return {
+    label: "Estimated",
+    className: "border-slate-200 bg-slate-50 text-slate-600",
+  }
 }
 
 function getLocationTypeIcon(locationType: LocationType) {
@@ -291,6 +309,21 @@ export default function LocationsPage() {
       country_code: formState.country_code.trim() || undefined,
       floor_area_sqm: floorArea,
       operating_hours_notes: formState.operating_hours_notes.trim(),
+      monthly_energy_kwh: formState.monthly_energy_kwh.trim() ? Number(formState.monthly_energy_kwh.trim()) : null,
+      monthly_energy_cost: formState.monthly_energy_cost.trim() ? Number(formState.monthly_energy_cost.trim()) : null,
+    }
+
+    const monthlyEnergyKwh = payload.monthly_energy_kwh ?? null
+    const monthlyEnergyCost = payload.monthly_energy_cost ?? null
+
+    if (monthlyEnergyKwh !== null && (!Number.isFinite(monthlyEnergyKwh) || monthlyEnergyKwh < 0)) {
+      setToast({ type: "error", message: "Monthly energy kWh must be zero or greater when provided." })
+      return
+    }
+
+    if (monthlyEnergyCost !== null && (!Number.isFinite(monthlyEnergyCost) || monthlyEnergyCost < 0)) {
+      setToast({ type: "error", message: "Monthly energy cost must be zero or greater when provided." })
+      return
     }
 
     setCreatingLocation(true)
@@ -476,6 +509,7 @@ export default function LocationsPage() {
                 {visibleLocations.map((location) => {
                   const locationStatus = getOpportunityStatus(location)
                   const TypeIcon = getLocationTypeIcon(location.location_type)
+                  const dataQualityBadge = getDataQualityBadge(location)
 
                   return (
                     <Card key={location.id} className="gap-4 rounded-2xl border border-border/80 bg-white py-4 shadow-sm">
@@ -485,9 +519,14 @@ export default function LocationsPage() {
                             <TypeIcon size={14} weight="fill" />
                             {LOCATION_TYPE_LABELS[location.location_type]}
                           </Badge>
-                          <Badge variant="outline" className={statusBadgeClass(locationStatus)}>
-                            {getOpportunityLabel(locationStatus)}
-                          </Badge>
+                          <div className="flex flex-wrap items-center justify-end gap-2">
+                            <Badge variant="outline" className={dataQualityBadge.className}>
+                              {dataQualityBadge.label}
+                            </Badge>
+                            <Badge variant="outline" className={statusBadgeClass(locationStatus)}>
+                              {getOpportunityLabel(locationStatus)}
+                            </Badge>
+                          </div>
                         </div>
 
                         <div>
@@ -513,6 +552,10 @@ export default function LocationsPage() {
                           <div>
                             <p className={metricLabelClass()}>Missions</p>
                             <p className="mt-1 text-base font-medium text-foreground">{formatNumber(location.missions_count)}</p>
+                          </div>
+                          <div>
+                            <p className={metricLabelClass()}>Billing records</p>
+                            <p className="mt-1 text-base font-medium text-foreground">{formatNumber(location.billing_records_count)}</p>
                           </div>
                         </div>
 
@@ -580,6 +623,7 @@ export default function LocationsPage() {
                       {visibleLocations.map((location) => {
                         const TypeIcon = getLocationTypeIcon(location.location_type)
                         const locationStatus = getOpportunityStatus(location)
+                        const dataQualityBadge = getDataQualityBadge(location)
 
                         return (
                           <tr key={location.id} className="border-t border-border/70">
@@ -589,7 +633,14 @@ export default function LocationsPage() {
                                 {LOCATION_TYPE_LABELS[location.location_type]}
                               </Badge>
                             </td>
-                            <td className="px-4 py-3 font-medium text-foreground">{location.name}</td>
+                            <td className="px-4 py-3 font-medium text-foreground">
+                              <span>{location.name}</span>
+                              <span className="mt-1 block">
+                                <Badge variant="outline" className={dataQualityBadge.className}>
+                                  {dataQualityBadge.label}
+                                </Badge>
+                              </span>
+                            </td>
                             <td className="px-4 py-3 text-muted-foreground">
                               {location.city || "City not set"}, {location.country || "Country not set"}
                             </td>
@@ -730,6 +781,27 @@ export default function LocationsPage() {
                   }))
                 }
               />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="location-energy-kwh">Monthly energy kWh</Label>
+                <Input
+                  id="location-energy-kwh"
+                  placeholder="12500"
+                  value={formState.monthly_energy_kwh}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, monthly_energy_kwh: event.target.value }))}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="location-energy-cost">Monthly energy cost</Label>
+                <Input
+                  id="location-energy-cost"
+                  placeholder="2400"
+                  value={formState.monthly_energy_cost}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, monthly_energy_cost: event.target.value }))}
+                />
+              </div>
             </div>
           </div>
 

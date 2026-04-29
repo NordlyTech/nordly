@@ -300,7 +300,8 @@ export type AdminCompanyListItem = {
 }
 
 export async function getAdminCompanies(): Promise<AdminCompanyListItem[]> {
-  await requireAdminContext()
+  const { user } = await requireAdminContext()
+  const currentAdminUserId = user.id
   const supabase = createAdminClient()
 
   const [companiesResult, locationsResult, insightsResult, companyMembersResult] = await Promise.all([
@@ -355,7 +356,9 @@ export async function getAdminCompanies(): Promise<AdminCompanyListItem[]> {
 
   return ((companiesResult.data ?? []) as RecordValue[]).map((row) => {
     const id = asString(row.id) ?? ""
-    const memberUserIds = memberUsersByCompany.get(id) ?? []
+    const memberUserIds = (memberUsersByCompany.get(id) ?? []).filter(
+      (memberUserId) => memberUserId !== currentAdminUserId
+    )
 
     return {
       id,

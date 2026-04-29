@@ -64,6 +64,8 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: C
     notFound()
   }
 
+  const defaultLocationId = company.locations[0]?.id ?? null
+
   async function regenerateAction(formData: FormData) {
     "use server"
 
@@ -102,6 +104,20 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: C
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            id="generate-report-btn"
+            type="button"
+            className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+            data-company-id={company.id}
+            data-location-id={defaultLocationId ?? ""}
+          >
+            Generate Report
+          </button>
+          <a id="generate-report-link" className="hidden text-sm font-medium text-primary underline" href="#" target="_blank" rel="noreferrer">
+            Download report
+          </a>
+        </div>
         <Button type="button" variant="destructive" size="sm" asChild>
           <Link href={`/admin/companies/${company.id}?tab=${tab}&delete=confirm`}>Delete company</Link>
         </Button>
@@ -109,6 +125,65 @@ export default async function AdminCompanyDetailPage({ params, searchParams }: C
           <Link href="/admin/companies">Back to companies</Link>
         </Button>
       </div>
+
+      <p id="generate-report-error" className="hidden text-xs text-rose-700" />
+
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function () {
+              const button = document.getElementById("generate-report-btn");
+              const link = document.getElementById("generate-report-link");
+              const error = document.getElementById("generate-report-error");
+              if (!button || !link || !error) return;
+
+              const idleLabel = "Generate Report";
+              const loadingLabel = "Generating report...";
+
+              button.addEventListener("click", async function () {
+                const companyId = button.getAttribute("data-company-id") || "";
+                const locationId = button.getAttribute("data-location-id") || "";
+
+                button.setAttribute("disabled", "true");
+                button.textContent = loadingLabel;
+                error.textContent = "";
+                error.classList.add("hidden");
+                link.classList.add("hidden");
+
+                try {
+                  const payload = locationId ? { company_id: companyId, location_id: locationId } : { company_id: companyId };
+                  const response = await fetch("/api/report/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                  });
+
+                  const data = await response.json();
+
+                  if (!response.ok || !data?.ok) {
+                    throw new Error(data?.error || "Failed to generate report");
+                  }
+
+                  const url = data?.download_url || data?.url || data?.downloadUrl;
+                  if (!url) {
+                    throw new Error("Report generated but no download URL was returned");
+                  }
+
+                  link.setAttribute("href", url);
+                  link.classList.remove("hidden");
+                } catch (e) {
+                  const message = e instanceof Error ? e.message : "Failed to generate report";
+                  error.textContent = message;
+                  error.classList.remove("hidden");
+                } finally {
+                  button.removeAttribute("disabled");
+                  button.textContent = idleLabel;
+                }
+              });
+            })();
+          `,
+        }}
+      />
 
       {resolvedSearchParams.notice ? (
         <SectionCard title="Notice" description="Latest company action result.">

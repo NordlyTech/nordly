@@ -39,6 +39,27 @@ async function resolveAppOrigin() {
   return origin.replace(/\/$/, "")
 }
 
+function buildOtpVerifyLoginUrl({
+  origin,
+  tokenHash,
+  verifyType,
+  nextPath,
+}: {
+  origin: string
+  tokenHash: string
+  verifyType: string
+  nextPath: "/app" | "/admin"
+}) {
+  const params = new URLSearchParams({
+    impersonate: "1",
+    token_hash: tokenHash,
+    type: verifyType,
+    next: nextPath,
+  })
+
+  return `${origin}/login?${params.toString()}`
+}
+
 export async function impersonateUserAction(targetUserId: string, companyName: string): Promise<string> {
   const normalizedTargetUserId = targetUserId.trim()
 
@@ -47,6 +68,10 @@ export async function impersonateUserAction(targetUserId: string, companyName: s
   }
 
   const { user } = await requireAdminContext()
+
+  if (normalizedTargetUserId === user.id) {
+    throw new Error("Cannot impersonate the current admin account. Select a different company member.")
+  }
 
   const { url, serviceRoleKey } = getSupabaseAdminEnv()
   const adminSupabase = createAdminClient(url, serviceRoleKey, {
@@ -82,10 +107,18 @@ export async function impersonateUserAction(targetUserId: string, companyName: s
     throw new Error(targetLinkError.message)
   }
 
-  const targetActionLink = targetLinkData.properties?.action_link
-  if (!targetActionLink) {
+  const targetTokenHash = targetLinkData.properties?.hashed_token
+  if (!targetTokenHash) {
     throw new Error("Failed to generate impersonation link.")
   }
+
+  const targetVerifyType = targetLinkData.properties?.verification_type ?? "magiclink"
+  const targetLoginLink = buildOtpVerifyLoginUrl({
+    origin,
+    tokenHash: targetTokenHash,
+    verifyType: targetVerifyType,
+    nextPath: "/app",
+  })
 
   const adminEmail = user.email
   if (!adminEmail) {
@@ -104,10 +137,18 @@ export async function impersonateUserAction(targetUserId: string, companyName: s
     throw new Error(adminLinkError.message)
   }
 
-  const adminResumeLink = adminLinkData.properties?.action_link
-  if (!adminResumeLink) {
+  const adminResumeTokenHash = adminLinkData.properties?.hashed_token
+  if (!adminResumeTokenHash) {
     throw new Error("Failed to generate admin resume link.")
   }
+
+  const adminResumeType = adminLinkData.properties?.verification_type ?? "magiclink"
+  const adminResumeLink = buildOtpVerifyLoginUrl({
+    origin,
+    tokenHash: adminResumeTokenHash,
+    verifyType: adminResumeType,
+    nextPath: "/admin",
+  })
 
   const cookieStore = await cookies()
   cookieStore.set(
@@ -128,7 +169,7 @@ export async function impersonateUserAction(targetUserId: string, companyName: s
     }
   )
 
-  return targetActionLink
+  return targetLoginLink
 }
 
 export async function exitImpersonationAction() {

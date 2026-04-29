@@ -47,7 +47,15 @@ export default async function AdminCompaniesPage({ searchParams }: AdminCompanie
 
     const targetUserId = String(formData.get("target_user_id") ?? "").trim()
     const companyName = String(formData.get("company_name") ?? "").trim()
-    const loginLink = await impersonateUserAction(targetUserId, companyName)
+
+    let loginLink: string
+
+    try {
+      loginLink = await impersonateUserAction(targetUserId, companyName)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to generate impersonation token."
+      redirect(`/admin/companies?notice=${encodeURIComponent(`Impersonation failed: ${message}`)}`)
+    }
 
     redirect(loginLink)
   }
@@ -130,6 +138,14 @@ export default async function AdminCompaniesPage({ searchParams }: AdminCompanie
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button type="submit" size="sm">Save changes</Button>
+                <button
+                  id="generate-report-btn"
+                  type="button"
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                  data-company-id={editingCompany.id}
+                >
+                  Generate Report
+                </button>
                 <Button type="button" variant="outline" size="sm" asChild>
                   <Link href="/admin/companies">Cancel</Link>
                 </Button>
@@ -137,7 +153,74 @@ export default async function AdminCompaniesPage({ searchParams }: AdminCompanie
                   <Link href={`/admin/companies?edit=${editingCompany.id}&delete=confirm`}>Delete company</Link>
                 </Button>
               </div>
+              <div className="min-h-5">
+                <p id="generate-report-error" className="hidden text-xs text-rose-700" />
+                <a
+                  id="generate-report-link"
+                  className="hidden text-xs font-medium text-primary underline"
+                  href="#"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Download report
+                </a>
+              </div>
             </form>
+
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  (function () {
+                    const button = document.getElementById("generate-report-btn");
+                    const link = document.getElementById("generate-report-link");
+                    const error = document.getElementById("generate-report-error");
+                    if (!button || !link || !error) return;
+
+                    const idleLabel = "Generate Report";
+                    const loadingLabel = "Generating report...";
+
+                    button.addEventListener("click", async function () {
+                      const companyId = button.getAttribute("data-company-id") || "";
+
+                      button.setAttribute("disabled", "true");
+                      button.textContent = loadingLabel;
+                      error.textContent = "";
+                      error.classList.add("hidden");
+                      link.classList.add("hidden");
+
+                      try {
+                        const response = await fetch("/api/report/generate", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ company_id: companyId }),
+                        });
+
+                        const data = await response.json();
+
+                        if (!response.ok || !data?.ok) {
+                          throw new Error(data?.error || "Failed to generate report");
+                        }
+
+                        const url = data?.download_url || data?.url || data?.downloadUrl;
+                        if (!url) {
+                          throw new Error("Report generated but no download URL was returned");
+                        }
+
+                        link.setAttribute("href", url);
+                        link.classList.remove("hidden");
+                      } catch (e) {
+                        const message = e instanceof Error ? e.message : "Failed to generate report";
+                        error.textContent = message;
+                        error.classList.remove("hidden");
+                      } finally {
+                        button.removeAttribute("disabled");
+                        button.textContent = idleLabel;
+                      }
+                    });
+                  })();
+                `,
+              }}
+            />
           </div>
         </SectionCard>
       ) : null}

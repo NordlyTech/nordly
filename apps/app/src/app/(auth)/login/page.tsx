@@ -10,48 +10,76 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/client"
 
+type LoginUrlParams = {
+  notice: string | null
+  tokenHash: string | null
+  verifyType: EmailOtpType | null
+  nextPath: string | null
+  hasImpersonationFlag: boolean
+  shouldRunImpersonation: boolean
+}
+
+function readLoginUrlParams(): LoginUrlParams {
+  if (typeof window === "undefined") {
+    return {
+      notice: null,
+      tokenHash: null,
+      verifyType: null,
+      nextPath: null,
+      hasImpersonationFlag: false,
+      shouldRunImpersonation: false,
+    }
+  }
+
+  const params = new URLSearchParams(window.location.search)
+  const tokenHash = params.get("token_hash")
+  const verifyType = params.get("type") as EmailOtpType | null
+  const hasImpersonationFlag = params.get("impersonate") === "1"
+
+  return {
+    notice: params.get("notice"),
+    tokenHash,
+    verifyType,
+    nextPath: params.get("next"),
+    hasImpersonationFlag,
+    shouldRunImpersonation: hasImpersonationFlag && !!tokenHash && !!verifyType,
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
-  const urlParams = useMemo(() => {
-    if (typeof window === "undefined") {
-      return {
-        notice: null as string | null,
-        shouldRunImpersonation: false,
-        tokenHash: null as string | null,
-        verifyType: null as EmailOtpType | null,
-        nextPath: null as string | null,
-      }
-    }
-
-    const params = new URLSearchParams(window.location.search)
-    const tokenHash = params.get("token_hash")
-    const verifyType = params.get("type") as EmailOtpType | null
-    const shouldImpersonate = params.get("impersonate") === "1"
-
-    return {
-      notice: params.get("notice"),
-      shouldRunImpersonation: shouldImpersonate && !!tokenHash && !!verifyType,
-      tokenHash,
-      verifyType,
-      nextPath: params.get("next"),
-    }
-  }, [])
-
-  const { notice, shouldRunImpersonation, tokenHash, verifyType, nextPath } = urlParams
+  const [urlParams, setUrlParams] = useState<LoginUrlParams>(() => readLoginUrlParams())
+  const { notice, tokenHash, verifyType, nextPath, hasImpersonationFlag, shouldRunImpersonation } = urlParams
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isImpersonating, setIsImpersonating] = useState(shouldRunImpersonation)
+  const [isImpersonating, setIsImpersonating] = useState(false)
+
+  useEffect(() => {
+    const updateParams = () => setUrlParams(readLoginUrlParams())
+
+    updateParams()
+    window.addEventListener("popstate", updateParams)
+
+    return () => window.removeEventListener("popstate", updateParams)
+  }, [])
 
   useEffect(() => {
     if (!shouldRunImpersonation || !tokenHash || !verifyType) {
+      setIsImpersonating(false)
       return
     }
 
+    setError(null)
+    setIsImpersonating(true)
+
     void (async () => {
+      // Clear any active session first so the incoming impersonation token becomes authoritative.
+      await supabase.auth.signOut()
+
       const { error: verifyError } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: verifyType,
@@ -109,6 +137,12 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-slate-600">Continue to your Nordly workspace.</p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          {hasImpersonationFlag && !shouldRunImpersonation ? (
+            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              Impersonation link is missing required parameters. Please retry from Admin Companies.
+            </p>
+          ) : null}
+
           {isImpersonating ? (
             <p className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
               Completing impersonation sign-in...
